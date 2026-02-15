@@ -15,6 +15,7 @@ Main goal: parse/edit `mafiaXXX.YYY` save files safely (with original `G_Stream`
 
 - `mafia_editor_gui.cpp` - WinAPI GUI editor source.
 - `mafia_save.cpp`, `mafia_save.hpp` - save format, segment parsing, read/write helpers.
+- `profile_sav.cpp`, `profile_sav.hpp` - profile `.sav` format parser/rebuilder (`forP` stream).
 - `mafia_stream_tool.cpp` - CLI inspector for save internals.
 - `gvas_*`, `payload_study.cpp`, `save_probe.cpp` - research/legacy utilities.
 - `docs/GUI_EDITOR.md` - GUI feature documentation.
@@ -25,7 +26,7 @@ Main goal: parse/edit `mafiaXXX.YYY` save files safely (with original `G_Stream`
 ## Build (Windows, MinGW g++)
 
 ```powershell
-g++ -std=c++17 -O2 -Wall -Wextra -static -static-libgcc -static-libstdc++ mafia_save.cpp mafia_editor_gui.cpp -o "bin/gui/Mafia Savegame Editor.exe" -mwindows -lcomdlg32 -lcomctl32
+g++ -std=c++17 -O2 -Wall -Wextra -static -static-libgcc -static-libstdc++ mafia_save.cpp profile_sav.cpp mafia_editor_gui.cpp -o "bin/gui/Mafia Savegame Editor.exe" -mwindows -lcomdlg32 -lcomctl32
 ```
 
 ## Run

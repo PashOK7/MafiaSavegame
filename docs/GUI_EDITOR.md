@@ -9,20 +9,27 @@ Minimal Windows GUI editor for Mafia 1 (2002) saves.
 ## Build
 
 ```powershell
-g++ -std=c++17 -O2 -Wall -Wextra -static -static-libgcc -static-libstdc++ mafia_save.cpp mafia_editor_gui.cpp -o "bin/gui/Mafia Savegame Editor.exe" -mwindows -lcomdlg32 -lcomctl32
+g++ -std=c++17 -O2 -Wall -Wextra -static -static-libgcc -static-libstdc++ mafia_save.cpp profile_sav.cpp mafia_editor_gui.cpp -o "bin/gui/Mafia Savegame Editor.exe" -mwindows -lcomdlg32 -lcomctl32
 ```
 
 ## Usage
 
 1. Run `bin/gui/Mafia Savegame Editor.exe`.
 2. Click `Open...` and choose a save file.
-3. Use tab `Main` to edit:
+3. Supported formats:
+- mission saves `mafiaXXX.YYY`
+- profile saves `mafiaXXX.sav` (advanced raw fields in `Main` tab)
+4. Use tab `Main` to edit:
 - `HP %`
 - `Date (DD.MM.YYYY)`
 - `Time (HH:MM:SS)`
 - `Slot`
 - `Mission code`
 - `Mission name`
+For profile `.sav` mode, `Main` fields are remapped to raw core words:
+- `Profile ID` (`core84[2]`)
+- `Core[11]`, `Core[17]`, `Core[18]`, `Core[20]` (u32)
+- `Tag (core[4..7])` as ASCII text (16 bytes)
 4. Use tab `Actors` to edit selected actor:
 - `Actor name`
 - `Actor model`

@@ -6,6 +6,7 @@
 #endif
 
 #include "mafia_save.hpp"
+#include "profile_sav.hpp"
 
 #include <windows.h>
 #include <commctrl.h>
@@ -19,6 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -178,6 +180,8 @@ constexpr int ID_EDIT_GARAGE_A_DECODED = 1538;
 constexpr int ID_EDIT_GARAGE_B_DECODED = 1539;
 constexpr int ID_EDIT_GARAGE_A_COLOR = 1540;
 constexpr int ID_EDIT_GARAGE_B_COLOR = 1541;
+constexpr int ID_LIST_PROFILE_FREERIDE_BITS = 1542;
+constexpr int ID_LIST_PROFILE_RACE_BITS = 1543;
 constexpr int ID_SCROLL_ACTORS = 1701;
 constexpr int ID_STATIC_PATH = 1601;
 constexpr int ID_STATIC_INFO = 1602;
@@ -185,10 +189,18 @@ constexpr int ID_STATIC_STATUS = 1603;
 constexpr int ID_STATIC_WARNING = 1604;
 
 struct AppState {
+    enum class LoadedKind {
+        kNone = 0,
+        kMissionSave,
+        kProfileSav,
+    };
+
     bool loaded = false;
+    LoadedKind kind = LoadedKind::kNone;
     fs::path inputPath;
     std::vector<std::uint8_t> raw;
     mafia_save::SaveData save;
+    profile_sav::ProfileSaveData profile;
     std::vector<std::size_t> actorHeaders;
     std::vector<std::size_t> filteredActorHeaders;
     std::vector<std::size_t> carHeaders;
@@ -210,6 +222,16 @@ struct GarageCarCatalogEntry {
     std::string model;
     std::string shadow;
     std::string displayName;
+    std::uint32_t raceMask = 0;
+    std::uint32_t champMask = 0;
+    std::uint32_t freerideMask = 0;
+    bool masksKnown = false;
+};
+
+struct ProfileMaskBitGroup {
+    int bit = 0;
+    std::uint32_t mask = 0;
+    std::vector<std::string> cars;
 };
 
 struct Ui {
@@ -241,6 +263,10 @@ struct Ui {
     HWND slotLabel = nullptr;
     HWND mcodeLabel = nullptr;
     HWND mnameLabel = nullptr;
+    HWND profileFreerideBitsLabel = nullptr;
+    HWND profileRaceBitsLabel = nullptr;
+    HWND profileFreerideBits = nullptr;
+    HWND profileRaceBits = nullptr;
 
     HWND missionTitle = nullptr;
     HWND ghMarker = nullptr;
@@ -523,10 +549,15 @@ Ui g_ui;
 HFONT g_font = nullptr;
 HBRUSH g_bgBrush = nullptr;
 std::vector<GarageCarCatalogEntry> g_garageCatalog;
+std::vector<ProfileMaskBitGroup> g_profileFreerideGroups;
+std::vector<ProfileMaskBitGroup> g_profileRaceGroups;
+bool g_suppressMainEditEvents = false;
 void LayoutActorsPage();
 void LayoutMissionPage();
 void LayoutCarsPage();
 void LayoutGaragePage();
+void LayoutWindow(HWND hwnd);
+void ShowTab(int index);
 bool IsActorPairAt(std::size_t headerIdx);
 
 std::string Trim(std::string s) {
@@ -574,6 +605,34 @@ void SetFieldVisible(HWND label, HWND edit, bool visible) {
     if (edit != nullptr) {
         ShowWindow(edit, cmd);
     }
+}
+
+bool IsMissionMode() {
+    return g_state.loaded && g_state.kind == AppState::LoadedKind::kMissionSave;
+}
+
+bool IsProfileMode() {
+    return g_state.loaded && g_state.kind == AppState::LoadedKind::kProfileSav;
+}
+
+void SetMainLabelsMissionMode() {
+    SetText(g_ui.mainTitle, "Main Save Fields");
+    SetText(g_ui.hpLabel, "HP %:");
+    SetText(g_ui.dateLabel, "Date (DD.MM.YYYY):");
+    SetText(g_ui.timeLabel, "Time (HH:MM:SS):");
+    SetText(g_ui.slotLabel, "Slot:");
+    SetText(g_ui.mcodeLabel, "Mission code:");
+    SetText(g_ui.mnameLabel, "Mission name:");
+}
+
+void SetMainLabelsProfileMode() {
+    SetText(g_ui.mainTitle, "Profile .sav Fields");
+    SetText(g_ui.hpLabel, "Freeride mode (core[17]):");
+    SetText(g_ui.dateLabel, "Extreme cars (core[18]):");
+    SetText(g_ui.timeLabel, "Unlocked car groups (core[20]):");
+    SetText(g_ui.slotLabel, "Profile ID:");
+    SetText(g_ui.mcodeLabel, "Reserved (core[3]):");
+    SetText(g_ui.mnameLabel, "Tag (core[4..11], 32 chars):");
 }
 
 void SetStatus(const std::string& s) {
@@ -706,6 +765,55 @@ bool WriteCStr(std::vector<std::uint8_t>* data, std::size_t off, std::size_t cap
               static_cast<std::uint8_t>(0));
     for (std::size_t i = 0; i < value.size(); ++i) {
         (*data)[off + i] = static_cast<std::uint8_t>(value[i]);
+    }
+    return true;
+}
+
+std::string ReadAsciiTag(const std::vector<std::uint8_t>& data, std::size_t off, std::size_t cap) {
+    if (off >= data.size()) {
+        return {};
+    }
+    const std::size_t end = std::min(data.size(), off + cap);
+    std::string out;
+    out.reserve(cap);
+    for (std::size_t i = off; i < end; ++i) {
+        const char ch = static_cast<char>(data[i]);
+        if (ch == '\0') {
+            break;
+        }
+        if (static_cast<unsigned char>(ch) < 32u || static_cast<unsigned char>(ch) > 126u) {
+            break;
+        }
+        out.push_back(ch);
+    }
+    return Trim(out);
+}
+
+bool WriteAsciiTag(std::vector<std::uint8_t>* data, std::size_t off, std::size_t cap, const std::string& value, std::string* err) {
+    if (data == nullptr || off + cap > data->size()) {
+        if (err != nullptr) {
+            *err = "tag field out of range";
+        }
+        return false;
+    }
+    if (value.size() > cap) {
+        if (err != nullptr) {
+            *err = "tag too long";
+        }
+        return false;
+    }
+    std::fill(data->begin() + static_cast<std::ptrdiff_t>(off),
+              data->begin() + static_cast<std::ptrdiff_t>(off + cap),
+              static_cast<std::uint8_t>(0));
+    for (std::size_t i = 0; i < value.size(); ++i) {
+        const unsigned char ch = static_cast<unsigned char>(value[i]);
+        if (ch < 32u || ch > 126u) {
+            if (err != nullptr) {
+                *err = "tag must contain printable ASCII only";
+            }
+            return false;
+        }
+        (*data)[off + i] = static_cast<std::uint8_t>(ch);
     }
     return true;
 }
@@ -1374,8 +1482,231 @@ std::optional<std::size_t> FindTommyHeaderSegIdx() {
     return std::nullopt;
 }
 
+constexpr std::uint32_t kFreerideBaseMask = 0x02000000u;
+
+std::string FormatU32Hex(std::uint32_t value) {
+    std::ostringstream oss;
+    oss << "0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << value;
+    return oss.str();
+}
+
+std::string JoinNamesLimited(const std::vector<std::string>& names, std::size_t limit) {
+    if (names.empty()) {
+        return "-";
+    }
+    std::ostringstream oss;
+    const std::size_t n = std::min(limit, names.size());
+    for (std::size_t i = 0; i < n; ++i) {
+        if (i != 0u) {
+            oss << ", ";
+        }
+        oss << names[i];
+    }
+    if (names.size() > n) {
+        oss << " (+" << (names.size() - n) << ")";
+    }
+    return oss.str();
+}
+
+void BuildProfileMaskGroups(bool freeride, std::vector<ProfileMaskBitGroup>* out) {
+    if (out == nullptr) {
+        return;
+    }
+    out->clear();
+    std::vector<std::string> bitCars[32];
+    for (const auto& e : g_garageCatalog) {
+        if (!e.masksKnown) {
+            continue;
+        }
+        const std::uint32_t mask = freeride ? e.freerideMask : e.raceMask;
+        if (mask == 0u) {
+            continue;
+        }
+        for (int bit = 0; bit < 32; ++bit) {
+            const std::uint32_t bitMask = (1u << bit);
+            if ((mask & bitMask) == 0u) {
+                continue;
+            }
+            if (freeride && bitMask == kFreerideBaseMask) {
+                continue;
+            }
+            auto& names = bitCars[bit];
+            bool exists = false;
+            for (const auto& n : names) {
+                if (n == e.displayName) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                names.push_back(e.displayName);
+            }
+        }
+    }
+
+    for (int bit = 0; bit < 32; ++bit) {
+        if (bitCars[bit].empty()) {
+            continue;
+        }
+        ProfileMaskBitGroup g;
+        g.bit = bit;
+        g.mask = (1u << bit);
+        g.cars = std::move(bitCars[bit]);
+        out->push_back(std::move(g));
+    }
+}
+
+std::uint32_t BuildProfileMappedBitsMask(const std::vector<ProfileMaskBitGroup>& groups) {
+    std::uint32_t mask = 0u;
+    for (const auto& g : groups) {
+        mask |= g.mask;
+    }
+    return mask;
+}
+
+void EnsureMaskListColumns(HWND list) {
+    if (list == nullptr) {
+        return;
+    }
+    if (Header_GetItemCount(ListView_GetHeader(list)) > 0) {
+        return;
+    }
+
+    LVCOLUMNA c = {};
+    c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+    c.cx = 120;
+    c.pszText = const_cast<char*>("Bit");
+    c.iSubItem = 0;
+    ListView_InsertColumn(list, 0, &c);
+
+    c.cx = 540;
+    c.pszText = const_cast<char*>("Unlocks");
+    c.iSubItem = 1;
+    ListView_InsertColumn(list, 1, &c);
+}
+
+void FillMaskList(HWND list, const std::vector<ProfileMaskBitGroup>& groups, std::uint32_t maskValue) {
+    if (list == nullptr) {
+        return;
+    }
+    EnsureMaskListColumns(list);
+    ListView_DeleteAllItems(list);
+    for (std::size_t i = 0; i < groups.size(); ++i) {
+        const auto& g = groups[i];
+        std::ostringstream bitText;
+        bitText << g.bit << " (" << FormatU32Hex(g.mask) << ")";
+
+        LVITEMA item = {};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = static_cast<int>(i);
+        item.iSubItem = 0;
+        std::string bitCell = bitText.str();
+        item.pszText = bitCell.data();
+        item.lParam = static_cast<LPARAM>(g.bit);
+        const int row = ListView_InsertItem(list, &item);
+        if (row >= 0) {
+            std::string names = JoinNamesLimited(g.cars, 12u);
+            ListView_SetItemText(list, row, 1, names.data());
+            ListView_SetCheckState(list, row, (maskValue & g.mask) != 0u ? TRUE : FALSE);
+        }
+    }
+}
+
+std::uint32_t CollectMaskValueFromList(HWND list,
+                                       const std::vector<ProfileMaskBitGroup>& groups,
+                                       std::uint32_t oldValue) {
+    const std::uint32_t mappedBits = BuildProfileMappedBitsMask(groups);
+    std::uint32_t out = oldValue & ~mappedBits;
+    const int rowCount = ListView_GetItemCount(list);
+    const int limit = std::min(rowCount, static_cast<int>(groups.size()));
+    for (int i = 0; i < limit; ++i) {
+        if (!ListView_GetCheckState(list, i)) {
+            continue;
+        }
+        out |= groups[static_cast<std::size_t>(i)].mask;
+    }
+    return out;
+}
+
+void RefreshProfileMaskListsFromFields() {
+    if (g_ui.profileFreerideBits == nullptr || g_ui.profileRaceBits == nullptr) {
+        return;
+    }
+    if (!IsProfileMode()) {
+        ListView_DeleteAllItems(g_ui.profileFreerideBits);
+        ListView_DeleteAllItems(g_ui.profileRaceBits);
+        SetText(g_ui.profileFreerideBitsLabel, "Extreme cars (bits):");
+        SetText(g_ui.profileRaceBitsLabel, "Unlocked car groups (bits):");
+        return;
+    }
+
+    std::uint32_t freerideParam = 0u;
+    std::uint32_t raceMask = 0u;
+    if (g_state.profile.core84.size() >= profile_sav::kCoreSize) {
+        freerideParam = profile_sav::ReadU32LE(g_state.profile.core84, 18u * 4u);
+        raceMask = profile_sav::ReadU32LE(g_state.profile.core84, 20u * 4u);
+    }
+    std::uint32_t parsed = 0u;
+    std::string parseErr;
+    if (ParseU32Auto(Trim(GetText(g_ui.date)), &parsed, &parseErr, "Extreme cars")) {
+        freerideParam = parsed;
+    }
+    parseErr.clear();
+    if (ParseU32Auto(Trim(GetText(g_ui.time)), &parsed, &parseErr, "Unlocked car groups")) {
+        raceMask = parsed;
+    }
+
+    g_suppressMainEditEvents = true;
+    FillMaskList(g_ui.profileFreerideBits, g_profileFreerideGroups, freerideParam);
+    FillMaskList(g_ui.profileRaceBits, g_profileRaceGroups, raceMask);
+    std::ostringstream fr;
+    fr << "Extreme cars (bits, " << g_profileFreerideGroups.size() << "):";
+    SetText(g_ui.profileFreerideBitsLabel, fr.str());
+    std::ostringstream rc;
+    rc << "Unlocked car groups (bits, " << g_profileRaceGroups.size() << "):";
+    SetText(g_ui.profileRaceBitsLabel, rc.str());
+    g_suppressMainEditEvents = false;
+}
+
+void RebuildProfileMaskGroups() {
+    BuildProfileMaskGroups(true, &g_profileFreerideGroups);
+    BuildProfileMaskGroups(false, &g_profileRaceGroups);
+}
+
+bool ApplyMaskListChangeToProfileField(bool freerideList) {
+    if (!IsProfileMode()) {
+        return false;
+    }
+    HWND list = freerideList ? g_ui.profileFreerideBits : g_ui.profileRaceBits;
+    HWND field = freerideList ? g_ui.date : g_ui.time;
+    const auto& groups = freerideList ? g_profileFreerideGroups : g_profileRaceGroups;
+    if (list == nullptr || field == nullptr || groups.empty()) {
+        return false;
+    }
+
+    std::uint32_t oldValue = 0u;
+    if (g_state.profile.core84.size() >= profile_sav::kCoreSize) {
+        oldValue = profile_sav::ReadU32LE(g_state.profile.core84, freerideList ? (18u * 4u) : (20u * 4u));
+    }
+    std::uint32_t parsed = 0u;
+    std::string parseErr;
+    if (ParseU32Auto(Trim(GetText(field)), &parsed, &parseErr, freerideList ? "Extreme cars" : "Unlocked car groups")) {
+        oldValue = parsed;
+    }
+
+    const std::uint32_t nextValue = CollectMaskValueFromList(list, groups, oldValue);
+    g_suppressMainEditEvents = true;
+    SetText(field, std::to_string(nextValue));
+    g_suppressMainEditEvents = false;
+    return true;
+}
+
 void RefreshWarning() {
     if (!g_state.loaded) {
+        SetText(g_ui.warning, "");
+        return;
+    }
+    if (IsProfileMode()) {
         SetText(g_ui.warning, "");
         return;
     }
@@ -1395,20 +1726,57 @@ void RefreshWarning() {
 }
 
 void FillMain() {
+    g_suppressMainEditEvents = true;
     if (!g_state.loaded) {
+        SetMainLabelsMissionMode();
         SetText(g_ui.hp, "");
         SetText(g_ui.date, "");
         SetText(g_ui.time, "");
         SetText(g_ui.slot, "");
         SetText(g_ui.mcode, "");
         SetText(g_ui.mname, "");
+        ShowWindow(g_ui.profileFreerideBitsLabel, SW_HIDE);
+        ShowWindow(g_ui.profileRaceBitsLabel, SW_HIDE);
+        ShowWindow(g_ui.profileFreerideBits, SW_HIDE);
+        ShowWindow(g_ui.profileRaceBits, SW_HIDE);
+        RefreshProfileMaskListsFromFields();
+        g_suppressMainEditEvents = false;
         return;
     }
 
+    if (IsProfileMode()) {
+        SetMainLabelsProfileMode();
+        const auto& c = g_state.profile.core84;
+        if (c.size() >= profile_sav::kCoreSize) {
+            SetText(g_ui.hp, std::to_string(profile_sav::ReadU32LE(c, 17u * 4u)));
+            SetText(g_ui.date, std::to_string(profile_sav::ReadU32LE(c, 18u * 4u)));
+            SetText(g_ui.time, std::to_string(profile_sav::ReadU32LE(c, 20u * 4u)));
+            SetText(g_ui.slot, std::to_string(profile_sav::ReadU32LE(c, 2u * 4u)));
+            SetText(g_ui.mcode, std::to_string(profile_sav::ReadU32LE(c, 3u * 4u)));
+            SetText(g_ui.mname, ReadAsciiTag(c, 16, 32));
+        } else {
+            SetText(g_ui.hp, "");
+            SetText(g_ui.date, "");
+            SetText(g_ui.time, "");
+            SetText(g_ui.slot, "");
+            SetText(g_ui.mcode, "");
+            SetText(g_ui.mname, "");
+        }
+        ShowWindow(g_ui.profileFreerideBitsLabel, SW_SHOW);
+        ShowWindow(g_ui.profileRaceBitsLabel, SW_SHOW);
+        ShowWindow(g_ui.profileFreerideBits, SW_SHOW);
+        ShowWindow(g_ui.profileRaceBits, SW_SHOW);
+        RefreshProfileMaskListsFromFields();
+        g_suppressMainEditEvents = false;
+        return;
+    }
+
+    SetMainLabelsMissionMode();
     std::string err;
     mafia_save::MetaFields meta;
     if (!mafia_save::ReadMetaFields(g_state.save, &meta, &err)) {
         SetStatus("ReadMetaFields failed: " + err);
+        g_suppressMainEditEvents = false;
         return;
     }
 
@@ -1418,6 +1786,12 @@ void FillMain() {
     SetText(g_ui.slot, std::to_string(meta.slot));
     SetText(g_ui.mcode, std::to_string(meta.missionCode));
     SetText(g_ui.mname, mafia_save::ReadMissionName(g_state.save, &err));
+    ShowWindow(g_ui.profileFreerideBitsLabel, SW_HIDE);
+    ShowWindow(g_ui.profileRaceBitsLabel, SW_HIDE);
+    ShowWindow(g_ui.profileFreerideBits, SW_HIDE);
+    ShowWindow(g_ui.profileRaceBits, SW_HIDE);
+    RefreshProfileMaskListsFromFields();
+    g_suppressMainEditEvents = false;
 }
 
 void SetMissionScriptControlsEnabled(bool enabled) {
@@ -2268,6 +2642,172 @@ constexpr const char* kEmbeddedGarageCarNames[] = {
     "Flame Spear 4WD",
     "Manta Taxi FWD",
 };
+constexpr std::uint32_t kEmbeddedGarageFreerideMasks[] = {
+    0x02000000u, // Bolt Ace Tudor
+    0x02000000u, // Bolt Ace Touring
+    0x02000000u, // Bolt Ace Runabout
+    0x02000000u, // Bolt Ace Pickup
+    0x02000000u, // Bolt Ace Fordor
+    0x02000000u, // Bolt Ace Coupe
+    0x02000000u, // Bolt Model B Tudor
+    0x02000000u, // Bolt Model B Roadster
+    0x02000000u, // Bolt Model B Pickup
+    0x02000000u, // Bolt Model B Fordor
+    0x02000000u, // Bolt Model B Delivery
+    0x02000000u, // Bolt Model B Coupe
+    0x02000000u, // Bolt Model B Cabriolet
+    0x02000000u, // Schubert Six
+    0x02000000u, // Bolt V8 Coupe
+    0x02000000u, // Bolt V8 Fordor
+    0x02000000u, // Bolt V8 Roadster
+    0x02000000u, // Bolt V8 Touring
+    0x02000000u, // Bolt V8 Tudor
+    0x02000000u, // Schubert Extra Six Fordor
+    0x02000000u, // Schubert Extra Six Tudor
+    0x02000000u, // Falconer
+    0x02000000u, // Falconer Yellowcar
+    0x02000000u, // Crusader Chromium Fordor
+    0x02000000u, // Crusader Chromium Tudor
+    0x02000000u, // Guardian Terraplane Coupe
+    0x02000000u, // Guardian Terraplane Fordor
+    0x02000000u, // Guardian Terraplane Tudor
+    0x02000000u, // Thor 812 Cabriolet FWD
+    0x02000000u, // Thor 810 Phaeton FWD
+    0x02000000u, // Thor 810 Sedan FWD
+    0x02000000u, // Wright Coupe
+    0x02000000u, // Wright Fordor
+    0x02000000u, // Bruno Speedster 851
+    0x02000000u, // Celeste Marque 500
+    0x02000000u, // Lassiter V16 Fordor
+    0x02000000u, // Lassiter V16 Phaeton
+    0x02000000u, // Lassiter V16 Roadster
+    0x02000000u, // Silver Fletcher
+    0x02000000u, // Lassiter V16 Appolyon
+    0x00020000u, // Manta Prototype
+    0x02000000u, // Trautenberg Model J
+    0x00040000u, // Carrozella C-Otto 4WD
+    0x00040000u, // Brubaker 4WD
+    0x00040000u, // Trautenberg Racer 4WD
+    0x00040000u, // Caesar 8C Mostro
+    0x02000000u, // Bolt Ambulance
+    0x02000000u, // Bolt Firetruck
+    0x02000000u, // Bolt Hearse
+    0x02000000u, // Lassiter V16 Charon
+    0x02000000u, // Ulver Airstream Fordor
+    0x02000000u, // Ulver Airstream Tudor
+    0x02000000u, // Lassiter V16 Police
+    0x02000000u, // Schubert Six Police
+    0x02000000u, // Schubert Extra 6 Police Fordor
+    0x02000000u, // Schubert Extra 6 Police Tudor
+    0x02000000u, // Bolt Truck Flatbed
+    0x02000000u, // Bolt Truck Covered
+    0x02000000u, // Caesar 8C 2300 Racing
+    0x00000001u, // Bolt-Thrower
+    0x02000000u, // Bolt Truck
+    0x00000002u, // HotRod
+    0x02000000u, // Wright Coupe Gangster
+    0x02000000u, // Falconer Gangster
+    0x00000000u, // Trautenberg Model J
+    0x00000004u, // Black Dragon 4WD
+    0x00000008u, // Mutagen FWD
+    0x00000010u, // Flamer
+    0x00000020u, // Masseur
+    0x00000040u, // Masseur Taxi
+    0x00000080u, // Demoniac
+    0x00000100u, // Crazy Horse
+    0x00000200u, // Bob Mylan 4WD
+    0x00000400u, // Disorder 4WD
+    0x00000800u, // Speedee 4WD
+    0x00001000u, // Luciferion FWD
+    0x00002000u, // Black Metal 4WD
+    0x00004000u, // Hillbilly 5.1 FWD
+    0x00008000u, // Flower Power
+    0x00010000u, // Flame Spear 4WD
+    0x00080000u, // Manta Taxi FWD
+};
+constexpr std::uint32_t kEmbeddedGarageRaceMasks[] = {
+    0x00000001u, // Bolt Ace Tudor
+    0x00000001u, // Bolt Ace Touring
+    0x00000001u, // Bolt Ace Runabout
+    0x00000001u, // Bolt Ace Pickup
+    0x00000001u, // Bolt Ace Fordor
+    0x00000001u, // Bolt Ace Coupe
+    0x00000002u, // Bolt Model B Tudor
+    0x00000002u, // Bolt Model B Roadster
+    0x00000002u, // Bolt Model B Pickup
+    0x00000002u, // Bolt Model B Fordor
+    0x00000002u, // Bolt Model B Delivery
+    0x00000002u, // Bolt Model B Coupe
+    0x00000002u, // Bolt Model B Cabriolet
+    0x00000008u, // Schubert Six
+    0x00000004u, // Bolt V8 Coupe
+    0x00000004u, // Bolt V8 Fordor
+    0x00000004u, // Bolt V8 Roadster
+    0x00000004u, // Bolt V8 Touring
+    0x00000004u, // Bolt V8 Tudor
+    0x00000010u, // Schubert Extra Six Fordor
+    0x00000010u, // Schubert Extra Six Tudor
+    0x00000020u, // Falconer
+    0x00000020u, // Falconer Yellowcar
+    0x00000040u, // Crusader Chromium Fordor
+    0x00000040u, // Crusader Chromium Tudor
+    0x00000080u, // Guardian Terraplane Coupe
+    0x00000080u, // Guardian Terraplane Fordor
+    0x00000080u, // Guardian Terraplane Tudor
+    0x00020000u, // Thor 812 Cabriolet FWD
+    0x00000200u, // Thor 810 Phaeton FWD
+    0x00000200u, // Thor 810 Sedan FWD
+    0x00000400u, // Wright Coupe
+    0x00000400u, // Wright Fordor
+    0x00004000u, // Bruno Speedster 851
+    0x00008000u, // Celeste Marque 500
+    0x00040000u, // Lassiter V16 Fordor
+    0x00000100u, // Lassiter V16 Phaeton
+    0x00001000u, // Lassiter V16 Roadster
+    0x00000800u, // Silver Fletcher
+    0x00080000u, // Lassiter V16 Appolyon
+    0x00000001u, // Manta Prototype
+    0x00100000u, // Trautenberg Model J
+    0x00000001u, // Carrozella C-Otto 4WD
+    0x00000001u, // Brubaker 4WD
+    0x00000001u, // Trautenberg Racer 4WD
+    0x00000001u, // Caesar 8C Mostro
+    0x00000002u, // Bolt Ambulance
+    0x00000002u, // Bolt Firetruck
+    0x00000002u, // Bolt Hearse
+    0x00000100u, // Lassiter V16 Charon
+    0x00010000u, // Ulver Airstream Fordor
+    0x00010000u, // Ulver Airstream Tudor
+    0x00040000u, // Lassiter V16 Police
+    0x00000008u, // Schubert Six Police
+    0x00000010u, // Schubert Extra 6 Police Fordor
+    0x00000010u, // Schubert Extra 6 Police Tudor
+    0x00000002u, // Bolt Truck Flatbed
+    0x00000002u, // Bolt Truck Covered
+    0x01000000u, // Caesar 8C 2300 Racing
+    0x00000001u, // Bolt-Thrower
+    0x00000002u, // Bolt Truck
+    0x00000001u, // HotRod
+    0x00000400u, // Wright Coupe Gangster
+    0x00000020u, // Falconer Gangster
+    0x00100000u, // Trautenberg Model J
+    0x00000001u, // Black Dragon 4WD
+    0x00000001u, // Mutagen FWD
+    0x00000001u, // Flamer
+    0x00000001u, // Masseur
+    0x00000001u, // Masseur Taxi
+    0x00000001u, // Demoniac
+    0x00000001u, // Crazy Horse
+    0x00000001u, // Bob Mylan 4WD
+    0x00000001u, // Disorder 4WD
+    0x00000001u, // Speedee 4WD
+    0x00000001u, // Luciferion FWD
+    0x00000001u, // Black Metal 4WD
+    0x00000001u, // Hillbilly 5.1 FWD
+    0x00000001u, // Flower Power
+    0x00000001u, // Flame Spear 4WD
+    0x00000001u, // Manta Taxi FWD
+};
 
 bool IsGarageCodeToken(const std::string& s) {
     if (s.size() < 3 || s.size() > 24) {
@@ -2313,6 +2853,82 @@ std::vector<std::string> ExtractAsciiRuns(const std::vector<std::uint8_t>& bytes
     return out;
 }
 
+constexpr std::size_t kCarIndexRecordSize = 168u;
+constexpr std::size_t kCarIndexOffCode = 0u;
+constexpr std::size_t kCarIndexOffModel = 32u;
+constexpr std::size_t kCarIndexOffShadow = 64u;
+constexpr std::size_t kCarIndexOffName = 96u;
+constexpr std::size_t kCarIndexOffRaceMask = 132u;
+constexpr std::size_t kCarIndexOffChampMask = 136u;
+constexpr std::size_t kCarIndexOffFreerideMask = 160u;
+
+std::string ReadAsciiZ(const std::vector<std::uint8_t>& data, std::size_t off, std::size_t cap) {
+    if (off >= data.size()) {
+        return {};
+    }
+    const std::size_t end = std::min(data.size(), off + cap);
+    std::string out;
+    out.reserve(cap);
+    for (std::size_t i = off; i < end; ++i) {
+        const unsigned char ch = data[i];
+        if (ch == 0u) {
+            break;
+        }
+        if (ch < 32u || ch > 126u) {
+            break;
+        }
+        out.push_back(static_cast<char>(ch));
+    }
+    return Trim(out);
+}
+
+bool ParseGarageCatalogFromCarIndexDefBytes(const std::vector<std::uint8_t>& bytes,
+                                            std::vector<GarageCarCatalogEntry>* out,
+                                            std::string* err) {
+    if (bytes.size() < (kCarIndexRecordSize * 20u) || (bytes.size() % kCarIndexRecordSize) != 0u) {
+        if (err != nullptr) {
+            *err = "not a fixed-size carindex.def stream";
+        }
+        return false;
+    }
+
+    const std::size_t count = bytes.size() / kCarIndexRecordSize;
+    std::vector<GarageCarCatalogEntry> parsed;
+    parsed.reserve(count);
+    for (std::size_t i = 0; i < count; ++i) {
+        const std::size_t base = i * kCarIndexRecordSize;
+        const std::string code = ReadAsciiZ(bytes, base + kCarIndexOffCode, 32u);
+        const std::string model = ReadAsciiZ(bytes, base + kCarIndexOffModel, 32u);
+        const std::string shadow = ReadAsciiZ(bytes, base + kCarIndexOffShadow, 32u);
+        const std::string name = ReadAsciiZ(bytes, base + kCarIndexOffName, 32u);
+
+        if (!IsGarageCodeToken(code) || !EndsWithI3d(model) || !EndsWithI3d(shadow) || !IsGarageDisplayNameToken(name)) {
+            continue;
+        }
+
+        GarageCarCatalogEntry e;
+        e.index = static_cast<std::uint32_t>(parsed.size());
+        e.code = code;
+        e.model = model;
+        e.shadow = shadow;
+        e.displayName = name;
+        e.raceMask = mafia_save::ReadU32LE(bytes, base + kCarIndexOffRaceMask);
+        e.champMask = mafia_save::ReadU32LE(bytes, base + kCarIndexOffChampMask);
+        e.freerideMask = mafia_save::ReadU32LE(bytes, base + kCarIndexOffFreerideMask);
+        e.masksKnown = true;
+        parsed.push_back(std::move(e));
+    }
+
+    if (parsed.size() < 20u) {
+        if (err != nullptr) {
+            *err = "carindex fixed parse produced too few entries";
+        }
+        return false;
+    }
+    *out = std::move(parsed);
+    return true;
+}
+
 bool ParseGarageCatalogFromFile(const fs::path& path, std::vector<GarageCarCatalogEntry>* out, std::string* err) {
     if (out == nullptr) {
         if (err != nullptr) {
@@ -2326,6 +2942,11 @@ bool ParseGarageCatalogFromFile(const fs::path& path, std::vector<GarageCarCatal
             *err = "catalog file is empty or unreadable";
         }
         return false;
+    }
+
+    std::string fixedErr;
+    if (ParseGarageCatalogFromCarIndexDefBytes(bytes, out, &fixedErr)) {
+        return true;
     }
 
     const auto runs = ExtractAsciiRuns(bytes, 4);
@@ -2344,6 +2965,7 @@ bool ParseGarageCatalogFromFile(const fs::path& path, std::vector<GarageCarCatal
         e.model = model;
         e.shadow = shadow;
         e.displayName = name;
+        e.masksKnown = false;
         parsed.push_back(std::move(e));
         i += 3;
     }
@@ -2368,12 +2990,22 @@ void LoadEmbeddedGarageCatalog(std::vector<GarageCarCatalogEntry>* out) {
         GarageCarCatalogEntry e;
         e.index = static_cast<std::uint32_t>(i);
         e.displayName = kEmbeddedGarageCarNames[i];
+        if (i < (sizeof(kEmbeddedGarageFreerideMasks) / sizeof(kEmbeddedGarageFreerideMasks[0]))) {
+            e.freerideMask = kEmbeddedGarageFreerideMasks[i];
+            e.masksKnown = true;
+        }
+        if (i < (sizeof(kEmbeddedGarageRaceMasks) / sizeof(kEmbeddedGarageRaceMasks[0]))) {
+            e.raceMask = kEmbeddedGarageRaceMasks[i];
+            e.masksKnown = true;
+        }
         out->push_back(std::move(e));
     }
 }
 
 void RefreshGarageCatalog() {
     g_garageCatalog.clear();
+    g_profileFreerideGroups.clear();
+    g_profileRaceGroups.clear();
     g_state.garageCatalogLoaded = false;
     g_state.garageCatalogEmbedded = false;
     g_state.garageCatalogPath.clear();
@@ -2426,6 +3058,7 @@ void RefreshGarageCatalog() {
         std::vector<GarageCarCatalogEntry> parsed;
         if (ParseGarageCatalogFromFile(p, &parsed, &err)) {
             g_garageCatalog = std::move(parsed);
+            RebuildProfileMaskGroups();
             g_state.garageCatalogLoaded = true;
             g_state.garageCatalogEmbedded = false;
             g_state.garageCatalogPath = p;
@@ -2435,6 +3068,7 @@ void RefreshGarageCatalog() {
 
     LoadEmbeddedGarageCatalog(&g_garageCatalog);
     if (!g_garageCatalog.empty()) {
+        RebuildProfileMaskGroups();
         g_state.garageCatalogLoaded = true;
         g_state.garageCatalogEmbedded = true;
         g_state.garageCatalogPath.clear();
@@ -2819,6 +3453,23 @@ void RefreshInfo() {
 
     SetText(g_ui.path, g_state.inputPath.string());
 
+    if (IsProfileMode()) {
+        const auto& c = g_state.profile.core84;
+        std::ostringstream oss;
+        oss << "Profile .sav | core84/720/92/156";
+        if (c.size() >= profile_sav::kCoreSize) {
+            const std::uint32_t freerideMode = profile_sav::ReadU32LE(c, 17u * 4u);
+            const std::uint32_t freerideParam = profile_sav::ReadU32LE(c, 18u * 4u);
+            const std::uint32_t raceMask = profile_sav::ReadU32LE(c, 20u * 4u);
+            oss << " | profile_id=" << profile_sav::ReadU32LE(c, 2u * 4u);
+            oss << " | freeride_mode=" << freerideMode;
+            oss << " | freeride_param=" << freerideParam << " (" << FormatU32Hex(freerideParam) << ")";
+            oss << " | race_mask=" << raceMask << " (" << FormatU32Hex(raceMask) << ")";
+        }
+        SetText(g_ui.info, oss.str());
+        return;
+    }
+
     std::string err;
     mafia_save::MetaFields meta;
     if (!mafia_save::ReadMetaFields(g_state.save, &meta, &err)) {
@@ -2834,7 +3485,8 @@ void RefreshInfo() {
 }
 
 void SetEnabledMain(bool enabled) {
-    const HWND arr[] = {g_ui.hp, g_ui.date, g_ui.time, g_ui.slot, g_ui.mcode, g_ui.mname};
+    const HWND arr[] = {g_ui.hp, g_ui.date, g_ui.time, g_ui.slot, g_ui.mcode, g_ui.mname, g_ui.profileFreerideBits,
+                        g_ui.profileRaceBits};
     for (HWND h : arr) {
         EnableWindow(h, enabled ? TRUE : FALSE);
     }
@@ -2912,13 +3564,18 @@ void FillAll() {
     FillGarageList();
 
     const bool on = g_state.loaded;
+    const bool missionMode = IsMissionMode();
     SetEnabledMain(on);
-    SetEnabledMission(on);
-    SetEnabledActors(on);
-    SetEnabledCars(on);
-    SetEnabledGarage(on && HasGarageInfoData());
+    SetEnabledMission(on && missionMode);
+    SetEnabledActors(on && missionMode);
+    SetEnabledCars(on && missionMode);
+    SetEnabledGarage(on && missionMode && HasGarageInfoData());
     EnableWindow(g_ui.saveBtn, on ? TRUE : FALSE);
     EnableWindow(g_ui.resetBtn, on ? TRUE : FALSE);
+    if (IsProfileMode()) {
+        TabCtrl_SetCurSel(g_ui.tab, 0);
+        ShowTab(0);
+    }
 }
 
 bool LoadFile(HWND hwnd, const fs::path& path) {
@@ -2928,17 +3585,23 @@ bool LoadFile(HWND hwnd, const fs::path& path) {
         return false;
     }
 
-    mafia_save::SaveData parsed;
-    std::string err;
-    if (!mafia_save::ParseSave(raw, &parsed, &err)) {
-        Error(hwnd, "ParseSave failed: " + err);
+    mafia_save::SaveData parsedMission;
+    profile_sav::ProfileSaveData parsedProfile;
+    std::string missionErr;
+    const bool missionOk = mafia_save::ParseSave(raw, &parsedMission, &missionErr);
+    bool profileOk = false;
+    std::string profileErr;
+    if (!missionOk) {
+        profileOk = profile_sav::ParseProfileSave(raw, &parsedProfile, &profileErr);
+    }
+    if (!missionOk && !profileOk) {
+        Error(hwnd, "Unsupported save format.\nmission parse: " + missionErr + "\nprofile .sav parse: " + profileErr);
         return false;
     }
 
     g_state.loaded = true;
     g_state.inputPath = path;
     g_state.raw = raw;
-    g_state.save = std::move(parsed);
     g_state.selectedActor = 0;
     g_state.selectedCar = 0;
     g_state.selectedGarageSlot = 0;
@@ -2947,11 +3610,26 @@ bool LoadFile(HWND hwnd, const fs::path& path) {
     g_state.actorsRightScroll = 0;
     g_state.actorsRightScrollMax = 0;
     RefreshGarageCatalog();
-    RebuildActorIndex();
-    RebuildFilteredActors();
-    RebuildCarIndex();
+
+    if (missionOk) {
+        g_state.kind = AppState::LoadedKind::kMissionSave;
+        g_state.save = std::move(parsedMission);
+        g_state.profile = {};
+        RebuildActorIndex();
+        RebuildFilteredActors();
+        RebuildCarIndex();
+    } else {
+        g_state.kind = AppState::LoadedKind::kProfileSav;
+        g_state.profile = std::move(parsedProfile);
+        g_state.save = {};
+        g_state.actorHeaders.clear();
+        g_state.filteredActorHeaders.clear();
+        g_state.carHeaders.clear();
+    }
+
     FillAll();
-    SetStatus("Loaded: " + path.string());
+    LayoutWindow(hwnd);
+    SetStatus((missionOk ? "Loaded mission save: " : "Loaded profile .sav: ") + path.string());
     return true;
 }
 
@@ -2964,7 +3642,7 @@ std::optional<fs::path> ChooseFile(HWND hwnd, bool saveMode, const std::string& 
     OPENFILENAMEA ofn = {};
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = hwnd;
-    ofn.lpstrFilter = "Mafia save files\0mafia*.*\0All files\0*.*\0\0";
+    ofn.lpstrFilter = "Mafia save files\0mafia*.*;*.sav\0Mission saves (mafiaXXX.YYY)\0mafia*.*\0Profile saves (*.sav)\0*.sav\0All files\0*.*\0\0";
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
@@ -3688,6 +4366,61 @@ bool BuildEditedSave(mafia_save::SaveData* out, std::string* err) {
     return true;
 }
 
+bool BuildEditedProfile(profile_sav::ProfileSaveData* out, std::string* err) {
+    if (out == nullptr) {
+        return false;
+    }
+    if (!IsProfileMode()) {
+        if (err != nullptr) {
+            *err = "profile .sav is not loaded";
+        }
+        return false;
+    }
+
+    profile_sav::ProfileSaveData edited = g_state.profile;
+    if (edited.core84.size() < profile_sav::kCoreSize) {
+        if (err != nullptr) {
+            *err = "core84 block is too small";
+        }
+        return false;
+    }
+
+    std::uint32_t profileId = 0;
+    std::uint32_t core17 = 0;
+    std::uint32_t core18 = 0;
+    std::uint32_t core20 = 0;
+    std::uint32_t core3 = 0;
+    if (!ParseU32Auto(Trim(GetText(g_ui.slot)), &profileId, err, "Profile ID")) {
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.hp)), &core17, err, "Freeride mode (core[17])")) {
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.date)), &core18, err, "Extreme cars (core[18])")) {
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.time)), &core20, err, "Unlocked car groups (core[20])")) {
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.mcode)), &core3, err, "Reserved (core[3])")) {
+        return false;
+    }
+
+    profile_sav::WriteU32LE(&edited.core84, 2u * 4u, profileId);
+    profile_sav::WriteU32LE(&edited.core84, 17u * 4u, core17);
+    profile_sav::WriteU32LE(&edited.core84, 18u * 4u, core18);
+    profile_sav::WriteU32LE(&edited.core84, 20u * 4u, core20);
+    profile_sav::WriteU32LE(&edited.core84, 3u * 4u, core3);
+
+    const std::string tag = Trim(GetText(g_ui.mname));
+    if (!WriteAsciiTag(&edited.core84, 16, 32, tag, err)) {
+        return false;
+    }
+
+    *out = std::move(edited);
+    return true;
+}
+
 bool ApplyFilterFromUi(std::string* err) {
     g_state.filterName = Trim(GetText(g_ui.filterName));
     const std::string typeText = Trim(GetText(g_ui.filterType));
@@ -3756,6 +4489,12 @@ HWND MakeCombo(HWND parent, int x, int y, int w, int h, int id, DWORD extraStyle
 HWND MakeButton(HWND parent, const char* text, int x, int y, int w, int h, int id) {
     return CreateWindowExA(0, "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, x, y, w, h, parent,
                            reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), nullptr, nullptr);
+}
+
+HWND MakeListView(HWND parent, int x, int y, int w, int h, int id, DWORD extraStyle = 0) {
+    return CreateWindowExA(WS_EX_CLIENTEDGE, WC_LISTVIEWA, "",
+                           WS_CHILD | WS_VISIBLE | WS_TABSTOP | LVS_REPORT | LVS_SHOWSELALWAYS | extraStyle,
+                           x, y, w, h, parent, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), nullptr, nullptr);
 }
 
 BOOL CALLBACK FontCb(HWND child, LPARAM) {
@@ -3836,6 +4575,7 @@ void LayoutMainPage() {
     RECT rc = {};
     GetClientRect(g_ui.pageMain, &rc);
     const int w = rc.right - rc.left;
+    const int h = rc.bottom - rc.top;
 
     const int margin = 16;
     const int labelW = 140;
@@ -3859,6 +4599,31 @@ void LayoutMainPage() {
     placeRow(g_ui.slotLabel, g_ui.slot, 160);
     placeRow(g_ui.mcodeLabel, g_ui.mcode, 180);
     placeRow(g_ui.mnameLabel, g_ui.mname, std::max(280, baseEditW));
+
+    const int rightX = margin + labelW + 8;
+    const int rightW = std::max(220, w - rightX - margin);
+    const int twoColGap = 12;
+    const int colW = std::max(120, (rightW - twoColGap) / 2);
+
+    if (IsProfileMode()) {
+        y += 4;
+        MoveWindow(g_ui.profileFreerideBitsLabel, rightX, y + 2, colW, 20, TRUE);
+        MoveWindow(g_ui.profileRaceBitsLabel, rightX + colW + twoColGap, y + 2, colW, 20, TRUE);
+        y += 22;
+
+        const int listH = std::max(120, h - y - margin);
+        MoveWindow(g_ui.profileFreerideBits, rightX, y, colW, listH, TRUE);
+        MoveWindow(g_ui.profileRaceBits, rightX + colW + twoColGap, y, colW, listH, TRUE);
+        ListView_SetColumnWidth(g_ui.profileFreerideBits, 0, 110);
+        ListView_SetColumnWidth(g_ui.profileFreerideBits, 1, std::max(120, colW - 122));
+        ListView_SetColumnWidth(g_ui.profileRaceBits, 0, 110);
+        ListView_SetColumnWidth(g_ui.profileRaceBits, 1, std::max(120, colW - 122));
+    } else {
+        MoveWindow(g_ui.profileFreerideBitsLabel, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.profileRaceBitsLabel, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.profileFreerideBits, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.profileRaceBits, 0, 0, 0, 0, TRUE);
+    }
 }
 
 void LayoutMissionPage() {
@@ -4389,6 +5154,15 @@ void CreatePages(HWND hwnd) {
     g_ui.mcode = MakeEdit(g_ui.pageMain, "", 150, 170, 140, 24, ID_EDIT_MCODE);
     g_ui.mnameLabel = MakeLabel(g_ui.pageMain, "Mission name:", 16, 204, 130, 20);
     g_ui.mname = MakeEdit(g_ui.pageMain, "", 150, 202, 360, 24, ID_EDIT_MNAME);
+    g_ui.profileFreerideBitsLabel = MakeLabel(g_ui.pageMain, "Extreme cars (bits):", 150, 236, 220, 20);
+    g_ui.profileRaceBitsLabel = MakeLabel(g_ui.pageMain, "Unlocked car groups (bits):", 380, 236, 220, 20);
+    g_ui.profileFreerideBits = MakeListView(g_ui.pageMain, 150, 384, 220, 120, ID_LIST_PROFILE_FREERIDE_BITS);
+    g_ui.profileRaceBits = MakeListView(g_ui.pageMain, 380, 384, 220, 120, ID_LIST_PROFILE_RACE_BITS);
+    const DWORD lvStyle = LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_DOUBLEBUFFER;
+    ListView_SetExtendedListViewStyle(g_ui.profileFreerideBits, lvStyle);
+    ListView_SetExtendedListViewStyle(g_ui.profileRaceBits, lvStyle);
+    EnsureMaskListColumns(g_ui.profileFreerideBits);
+    EnsureMaskListColumns(g_ui.profileRaceBits);
 
     g_ui.missionTitle = MakeLabel(g_ui.pageMission, "Mission / Script State (advanced)", 16, 12, 360, 20);
     g_ui.ghMarkerLabel = MakeLabel(g_ui.pageMission, "Payload marker:", 16, 44, 130, 20);
@@ -4797,6 +5571,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             RefreshGaragePreviewFromFields();
             return 0;
         }
+        if ((id == ID_EDIT_HP || id == ID_EDIT_DATE || id == ID_EDIT_TIME || id == ID_EDIT_SLOT || id == ID_EDIT_MCODE ||
+             id == ID_EDIT_MNAME) &&
+            code == EN_CHANGE) {
+            if (!g_suppressMainEditEvents && IsProfileMode()) {
+                if (id == ID_EDIT_DATE || id == ID_EDIT_TIME) {
+                    RefreshProfileMaskListsFromFields();
+                }
+                RefreshWarning();
+            }
+            return 0;
+        }
         if (id == ID_BTN_FILTER_APPLY && code == BN_CLICKED) {
             std::string err;
             if (!ApplyFilterFromUi(&err)) {
@@ -4948,48 +5733,80 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
 
             std::string err;
-            if (!ApplyActorEdits(&err)) {
-                Error(hwnd, "Actor fields invalid: " + err);
-                return 0;
-            }
-            if (!ApplyCarEdits(&err)) {
-                Error(hwnd, "Car fields invalid: " + err);
-                return 0;
-            }
-            if (!ApplyGarageEdits(&err)) {
-                Error(hwnd, "Garage fields invalid: " + err);
+            if (IsMissionMode()) {
+                if (!ApplyActorEdits(&err)) {
+                    Error(hwnd, "Actor fields invalid: " + err);
+                    return 0;
+                }
+                if (!ApplyCarEdits(&err)) {
+                    Error(hwnd, "Car fields invalid: " + err);
+                    return 0;
+                }
+                if (!ApplyGarageEdits(&err)) {
+                    Error(hwnd, "Garage fields invalid: " + err);
+                    return 0;
+                }
+
+                mafia_save::SaveData edited;
+                if (!BuildEditedSave(&edited, &err)) {
+                    Error(hwnd, "Main fields invalid: " + err);
+                    return 0;
+                }
+
+                const auto outPath = ChooseFile(hwnd, true, g_state.inputPath.filename().string());
+                if (!outPath.has_value()) {
+                    return 0;
+                }
+                std::vector<std::uint8_t> outRaw;
+                if (!mafia_save::BuildRaw(edited, &outRaw, &err)) {
+                    Error(hwnd, "BuildRaw failed: " + err);
+                    return 0;
+                }
+                if (!mafia_save::WriteFileBytes(*outPath, outRaw)) {
+                    Error(hwnd, "Failed to write output file");
+                    return 0;
+                }
+
+                g_state.save = std::move(edited);
+                g_state.raw = outRaw;
+                g_state.inputPath = *outPath;
+                RebuildActorIndex();
+                RebuildFilteredActors();
+                RebuildCarIndex();
+                FillAll();
+                SetStatus("Saved mission save: " + outPath->string());
                 return 0;
             }
 
-            mafia_save::SaveData edited;
-            if (!BuildEditedSave(&edited, &err)) {
-                Error(hwnd, "Main fields invalid: " + err);
-                return 0;
-            }
+            if (IsProfileMode()) {
+                profile_sav::ProfileSaveData edited;
+                if (!BuildEditedProfile(&edited, &err)) {
+                    Error(hwnd, "Profile fields invalid: " + err);
+                    return 0;
+                }
 
-            const auto outPath = ChooseFile(hwnd, true, g_state.inputPath.filename().string());
-            if (!outPath.has_value()) {
-                return 0;
-            }
+                const auto outPath = ChooseFile(hwnd, true, g_state.inputPath.filename().string());
+                if (!outPath.has_value()) {
+                    return 0;
+                }
+                std::vector<std::uint8_t> outRaw;
+                if (!profile_sav::BuildRaw(edited, &outRaw, &err)) {
+                    Error(hwnd, "Profile build failed: " + err);
+                    return 0;
+                }
+                if (!mafia_save::WriteFileBytes(*outPath, outRaw)) {
+                    Error(hwnd, "Failed to write output file");
+                    return 0;
+                }
 
-            std::vector<std::uint8_t> outRaw;
-            if (!mafia_save::BuildRaw(edited, &outRaw, &err)) {
-                Error(hwnd, "BuildRaw failed: " + err);
+                g_state.profile = std::move(edited);
+                g_state.raw = outRaw;
+                g_state.inputPath = *outPath;
+                FillAll();
+                SetStatus("Saved profile .sav: " + outPath->string());
                 return 0;
             }
-            if (!mafia_save::WriteFileBytes(*outPath, outRaw)) {
-                Error(hwnd, "Failed to write output file");
-                return 0;
-            }
-
-            g_state.save = std::move(edited);
-            g_state.raw = outRaw;
-            g_state.inputPath = *outPath;
-            RebuildActorIndex();
-            RebuildFilteredActors();
-            RebuildCarIndex();
-            FillAll();
-            SetStatus("Saved: " + outPath->string());
+            Error(hwnd, "Unknown loaded save kind");
             return 0;
         }
         return 0;
@@ -5064,8 +5881,37 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
     case WM_NOTIFY: {
         const auto* hdr = reinterpret_cast<const NMHDR*>(lParam);
+        if (hdr != nullptr &&
+            (hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_PROFILE_FREERIDE_BITS) ||
+             hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_PROFILE_RACE_BITS)) &&
+            hdr->code == LVN_ITEMCHANGED) {
+            if (g_suppressMainEditEvents || !IsProfileMode()) {
+                return 0;
+            }
+            const auto* lv = reinterpret_cast<const NMLISTVIEW*>(lParam);
+            if (lv == nullptr || (lv->uChanged & LVIF_STATE) == 0u) {
+                return 0;
+            }
+            const UINT oldState = (lv->uOldState & LVIS_STATEIMAGEMASK) >> 12;
+            const UINT newState = (lv->uNewState & LVIS_STATEIMAGEMASK) >> 12;
+            if (oldState == newState) {
+                return 0;
+            }
+            const bool freerideList = (hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_PROFILE_FREERIDE_BITS));
+            if (ApplyMaskListChangeToProfileField(freerideList)) {
+                RefreshWarning();
+                SetStatus(freerideList ? "Extreme cars updated from checkboxes"
+                                       : "Unlocked car groups updated from checkboxes");
+            }
+            return 0;
+        }
         if (hdr != nullptr && hdr->idFrom == static_cast<UINT_PTR>(ID_TAB) && hdr->code == TCN_SELCHANGE) {
-            ShowTab(TabCtrl_GetCurSel(g_ui.tab));
+            int tabIndex = TabCtrl_GetCurSel(g_ui.tab);
+            if (IsProfileMode() && tabIndex != 0) {
+                tabIndex = 0;
+                TabCtrl_SetCurSel(g_ui.tab, 0);
+            }
+            ShowTab(tabIndex);
             return 0;
         }
         return 0;
@@ -5097,7 +5943,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     INITCOMMONCONTROLSEX icc = {};
     icc.dwSize = sizeof(icc);
-    icc.dwICC = ICC_TAB_CLASSES;
+    icc.dwICC = ICC_TAB_CLASSES | ICC_LISTVIEW_CLASSES;
     InitCommonControlsEx(&icc);
 
     const char* cls = "MafiaSaveEditorWnd";
