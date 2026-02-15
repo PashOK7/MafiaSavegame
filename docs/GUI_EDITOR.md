@@ -4,17 +4,17 @@ Minimal Windows GUI editor for Mafia 1 (2002) saves.
 
 ## Executable
 
-- `bin/gui/mafia_editor_gui.exe`
+- `bin/gui/Mafia Savegame Editor.exe`
 
 ## Build
 
 ```powershell
-g++ -std=c++17 -O2 -Wall -Wextra mafia_save.cpp mafia_editor_gui.cpp -o bin/gui/mafia_editor_gui.exe -mwindows -lcomdlg32 -lcomctl32
+g++ -std=c++17 -O2 -Wall -Wextra mafia_save.cpp mafia_editor_gui.cpp -o "bin/gui/Mafia Savegame Editor.exe" -mwindows -lcomdlg32 -lcomctl32
 ```
 
 ## Usage
 
-1. Run `bin/gui/mafia_editor_gui.exe`.
+1. Run `bin/gui/Mafia Savegame Editor.exe`.
 2. Click `Open...` and choose a save file.
 3. Use tab `Main` to edit:
 - `HP %`

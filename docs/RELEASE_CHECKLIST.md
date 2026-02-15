@@ -6,22 +6,22 @@ This checklist is for publishing `MafiaSavegame` as a public GitHub project and 
 
 1. Ensure build passes:
 ```powershell
-g++ -std=c++17 -O2 -Wall -Wextra mafia_save.cpp mafia_editor_gui.cpp -o bin/gui/mafia_editor_gui.exe -mwindows -lcomdlg32 -lcomctl32
+g++ -std=c++17 -O2 -Wall -Wextra mafia_save.cpp mafia_editor_gui.cpp -o "bin/gui/Mafia Savegame Editor.exe" -mwindows -lcomdlg32 -lcomctl32
 ```
 2. Ensure `git status` has only intended changes.
 3. Ensure private/local folders are ignored (`Mafia/`, `archive/`, `dist/`).
 
 ## 2) Build Release Artifact
 
-Use packaging script:
+Use release script:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/build_release.ps1 -Version v0.1.0
+powershell -ExecutionPolicy Bypass -File scripts/build_release.ps1
 ```
 
 Result:
 
-- `dist/MafiaSavegame-v0.1.0-win64.zip`
+- `dist/Mafia Savegame Editor.exe`
 
 ## 3) Commit + Push
 
@@ -47,7 +47,7 @@ On GitHub:
 1. Open `Releases` -> `Draft a new release`.
 2. Tag: `v0.1.0`.
 3. Title: `Mafia Save Editor v0.1.0`.
-4. Upload asset: `dist/MafiaSavegame-v0.1.0-win64.zip`.
+4. Upload asset: `dist/Mafia Savegame Editor.exe`.
 5. Use notes from `docs/releases/v0.1.0.md` (or adapt).
 6. Publish release.
 
