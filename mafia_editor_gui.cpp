@@ -113,6 +113,9 @@ constexpr int ID_EDIT_CAR_DISABLE_ENGINE = 1244;
 constexpr int ID_EDIT_CAR_ENGINE_ON = 1245;
 constexpr int ID_EDIT_CAR_IS_ENGINE_ON = 1246;
 constexpr int ID_EDIT_CAR_ODOMETER = 1247;
+constexpr int ID_EDIT_HUMAN_HP_CURRENT = 1248;
+constexpr int ID_EDIT_HUMAN_HP_MAX = 1249;
+constexpr int ID_EDIT_HUMAN_HP_PERCENT = 1250;
 constexpr int ID_EDIT_INV_MODE = 1301;
 constexpr int ID_EDIT_INV_FLAG = 1302;
 constexpr int ID_EDIT_INV_SEL_ID = 1303;
@@ -182,7 +185,28 @@ constexpr int ID_EDIT_GARAGE_A_COLOR = 1540;
 constexpr int ID_EDIT_GARAGE_B_COLOR = 1541;
 constexpr int ID_LIST_PROFILE_FREERIDE_BITS = 1542;
 constexpr int ID_LIST_PROFILE_RACE_BITS = 1543;
+constexpr int ID_LIST_MR_PROFILE = 1544;
+constexpr int ID_LIST_MR_TIMES = 1545;
+constexpr int ID_LIST_MR_SEG0 = 1546;
+constexpr int ID_LIST_PROFILE_WORDS = 1547;
 constexpr int ID_SCROLL_ACTORS = 1701;
+constexpr int ID_LIST_ACTOR_RAW_ACTORS = 1711;
+constexpr int ID_LIST_ACTOR_RAW_TABLE = 1712;
+constexpr int ID_COMBO_ACTOR_RAW_SCOPE = 1713;
+constexpr int ID_EDIT_ACTOR_RAW_OFFSET = 1714;
+constexpr int ID_EDIT_ACTOR_RAW_BYTE = 1715;
+constexpr int ID_EDIT_ACTOR_RAW_U32 = 1716;
+constexpr int ID_EDIT_ACTOR_RAW_F32 = 1717;
+constexpr int ID_BTN_ACTOR_RAW_APPLY_BYTE = 1718;
+constexpr int ID_BTN_ACTOR_RAW_APPLY_U32 = 1719;
+constexpr int ID_BTN_ACTOR_RAW_APPLY_F32 = 1720;
+constexpr int ID_BTN_ACTOR_RAW_RELOAD = 1721;
+constexpr int ID_LIST_HUMAN_PROPS = 1731;
+constexpr int ID_EDIT_HPROP_INDEX = 1732;
+constexpr int ID_EDIT_HPROP_NAME = 1733;
+constexpr int ID_EDIT_HPROP_CUR = 1734;
+constexpr int ID_EDIT_HPROP_INIT = 1735;
+constexpr int ID_BTN_HPROP_APPLY = 1736;
 constexpr int ID_STATIC_PATH = 1601;
 constexpr int ID_STATIC_INFO = 1602;
 constexpr int ID_STATIC_STATUS = 1603;
@@ -193,6 +217,9 @@ struct AppState {
         kNone = 0,
         kMissionSave,
         kProfileSav,
+        kMrProfileSav,
+        kMrTimesSav,
+        kMrSeg0Sav,
     };
 
     bool loaded = false;
@@ -201,12 +228,21 @@ struct AppState {
     std::vector<std::uint8_t> raw;
     mafia_save::SaveData save;
     profile_sav::ProfileSaveData profile;
+    profile_sav::MrProfileSaveData mrProfile;
+    profile_sav::MrTimesSaveData mrTimes;
+    profile_sav::MrSeg0SaveData mrSeg0;
     std::vector<std::size_t> actorHeaders;
     std::vector<std::size_t> filteredActorHeaders;
     std::vector<std::size_t> carHeaders;
     int selectedActor = -1;
     int selectedCar = -1;
     int selectedGarageSlot = -1;
+    int selectedMrProfileWord = 0;
+    int selectedMrTimesRecord = 0;
+    int selectedMrSeg0Point = 0;
+    int selectedHumanProp = 1;
+    int actorRawScope = 1;
+    int actorRawOffset = 0;
     bool garageCatalogLoaded = false;
     bool garageCatalogEmbedded = false;
     fs::path garageCatalogPath;
@@ -248,6 +284,7 @@ struct Ui {
     HWND pageMission = nullptr;
     HWND pageCars = nullptr;
     HWND pageGarage = nullptr;
+    HWND pageActorRaw = nullptr;
     HWND actorsScroll = nullptr;
 
     HWND hp = nullptr;
@@ -267,6 +304,14 @@ struct Ui {
     HWND profileRaceBitsLabel = nullptr;
     HWND profileFreerideBits = nullptr;
     HWND profileRaceBits = nullptr;
+    HWND mrProfileTableLabel = nullptr;
+    HWND mrTimesTableLabel = nullptr;
+    HWND mrSeg0TableLabel = nullptr;
+    HWND mrProfileTable = nullptr;
+    HWND mrTimesTable = nullptr;
+    HWND mrSeg0Table = nullptr;
+    HWND profileWordsTableLabel = nullptr;
+    HWND profileWordsTable = nullptr;
 
     HWND missionTitle = nullptr;
     HWND ghMarker = nullptr;
@@ -460,6 +505,9 @@ struct Ui {
     HWND humanShootX = nullptr;
     HWND humanShootY = nullptr;
     HWND humanShootZ = nullptr;
+    HWND humanHpCurrent = nullptr;
+    HWND humanHpMax = nullptr;
+    HWND humanHpPercent = nullptr;
     HWND coordHint = nullptr;
     HWND applyActor = nullptr;
     HWND filterName = nullptr;
@@ -539,6 +587,39 @@ struct Ui {
     HWND humanShootXLabel = nullptr;
     HWND humanShootYLabel = nullptr;
     HWND humanShootZLabel = nullptr;
+    HWND humanHpCurrentLabel = nullptr;
+    HWND humanHpMaxLabel = nullptr;
+    HWND humanHpPercentLabel = nullptr;
+    HWND humanPropsLabel = nullptr;
+    HWND humanPropsTable = nullptr;
+    HWND humanPropIndexLabel = nullptr;
+    HWND humanPropIndex = nullptr;
+    HWND humanPropNameLabel = nullptr;
+    HWND humanPropName = nullptr;
+    HWND humanPropCurLabel = nullptr;
+    HWND humanPropCur = nullptr;
+    HWND humanPropInitLabel = nullptr;
+    HWND humanPropInit = nullptr;
+    HWND humanPropApply = nullptr;
+    HWND actorRawTitle = nullptr;
+    HWND actorRawActors = nullptr;
+    HWND actorRawScopeLabel = nullptr;
+    HWND actorRawScope = nullptr;
+    HWND actorRawReload = nullptr;
+    HWND actorRawOffsetLabel = nullptr;
+    HWND actorRawOffset = nullptr;
+    HWND actorRawByteLabel = nullptr;
+    HWND actorRawByte = nullptr;
+    HWND actorRawApplyByte = nullptr;
+    HWND actorRawU32Label = nullptr;
+    HWND actorRawU32 = nullptr;
+    HWND actorRawApplyU32 = nullptr;
+    HWND actorRawF32Label = nullptr;
+    HWND actorRawF32 = nullptr;
+    HWND actorRawApplyF32 = nullptr;
+    HWND actorRawTableLabel = nullptr;
+    HWND actorRawTable = nullptr;
+    HWND actorRawHint = nullptr;
 
     HWND saveBtn = nullptr;
     HWND resetBtn = nullptr;
@@ -552,13 +633,16 @@ std::vector<GarageCarCatalogEntry> g_garageCatalog;
 std::vector<ProfileMaskBitGroup> g_profileFreerideGroups;
 std::vector<ProfileMaskBitGroup> g_profileRaceGroups;
 bool g_suppressMainEditEvents = false;
+bool g_suppressHumanPropEvents = false;
 void LayoutActorsPage();
 void LayoutMissionPage();
 void LayoutCarsPage();
 void LayoutGaragePage();
+void LayoutActorRawPage();
 void LayoutWindow(HWND hwnd);
 void ShowTab(int index);
 bool IsActorPairAt(std::size_t headerIdx);
+std::string BuildActorRow(std::size_t segIdx);
 
 std::string Trim(std::string s) {
     auto isSpace = [](unsigned char c) { return std::isspace(c) != 0; };
@@ -578,23 +662,127 @@ std::string ToLowerAscii(std::string s) {
     return s;
 }
 
+std::wstring Utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) {
+        return {};
+    }
+    int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(), static_cast<int>(utf8.size()), nullptr, 0);
+    if (wlen <= 0) {
+        wlen = MultiByteToWideChar(CP_ACP, 0, utf8.data(), static_cast<int>(utf8.size()), nullptr, 0);
+        if (wlen <= 0) {
+            return {};
+        }
+        std::wstring w(static_cast<std::size_t>(wlen), L'\0');
+        MultiByteToWideChar(CP_ACP, 0, utf8.data(), static_cast<int>(utf8.size()), w.data(), wlen);
+        return w;
+    }
+    std::wstring w(static_cast<std::size_t>(wlen), L'\0');
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(), static_cast<int>(utf8.size()), w.data(), wlen);
+    return w;
+}
+
+std::string WideToUtf8(const std::wstring& wide) {
+    if (wide.empty()) {
+        return {};
+    }
+    const int len = WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
+    if (len <= 0) {
+        return {};
+    }
+    std::string out(static_cast<std::size_t>(len), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), out.data(), len, nullptr, nullptr);
+    return out;
+}
+
+std::string DecodeBytesCp1252ToUtf8(const std::uint8_t* bytes, std::size_t size) {
+    if (bytes == nullptr || size == 0) {
+        return {};
+    }
+    const int wlen = MultiByteToWideChar(1252, 0, reinterpret_cast<const char*>(bytes), static_cast<int>(size), nullptr, 0);
+    if (wlen <= 0) {
+        return {};
+    }
+    std::wstring wide(static_cast<std::size_t>(wlen), L'\0');
+    MultiByteToWideChar(1252, 0, reinterpret_cast<const char*>(bytes), static_cast<int>(size), wide.data(), wlen);
+    return WideToUtf8(wide);
+}
+
+bool EncodeUtf8ToGameBytes(const std::string& utf8, std::vector<std::uint8_t>* out, std::string* err) {
+    if (out == nullptr) {
+        if (err != nullptr) {
+            *err = "internal null output buffer";
+        }
+        return false;
+    }
+    out->clear();
+    const std::wstring wide = Utf8ToWide(utf8);
+    if (utf8.size() > 0 && wide.empty()) {
+        if (err != nullptr) {
+            *err = "invalid UTF-8 text";
+        }
+        return false;
+    }
+    out->reserve(wide.size());
+    for (wchar_t wc : wide) {
+        const std::uint32_t cp = static_cast<std::uint32_t>(wc);
+        if (cp < 32u || cp == 127u) {
+            if (err != nullptr) {
+                *err = "text contains control chars";
+            }
+            return false;
+        }
+        char byte = 0;
+        BOOL usedDefault = FALSE;
+        int n = WideCharToMultiByte(1252, WC_NO_BEST_FIT_CHARS, &wc, 1, &byte, 1, nullptr, &usedDefault);
+        if (n == 1 && !usedDefault) {
+            out->push_back(static_cast<std::uint8_t>(byte));
+            continue;
+        }
+        usedDefault = FALSE;
+        n = WideCharToMultiByte(1251, WC_NO_BEST_FIT_CHARS, &wc, 1, &byte, 1, nullptr, &usedDefault);
+        if (n == 1 && !usedDefault) {
+            out->push_back(static_cast<std::uint8_t>(byte));
+            continue;
+        }
+        if (err != nullptr) {
+            std::ostringstream oss;
+            oss << "unsupported char U+" << std::uppercase << std::hex << cp << std::nouppercase << std::dec;
+            *err = oss.str();
+        }
+        return false;
+    }
+    return true;
+}
+
 bool EndsWithI3d(const std::string& s) {
     const std::string low = ToLowerAscii(s);
     return low.size() >= 4 && low.compare(low.size() - 4, 4, ".i3d") == 0;
 }
 
 void SetText(HWND h, const std::string& s) {
-    SetWindowTextA(h, s.c_str());
+    const std::wstring ws = Utf8ToWide(s);
+    SetWindowTextW(h, ws.c_str());
 }
 
 std::string GetText(HWND h) {
-    const int len = GetWindowTextLengthA(h);
+    const int len = GetWindowTextLengthW(h);
     if (len <= 0) {
         return {};
     }
-    std::string s(static_cast<std::size_t>(len), '\0');
-    GetWindowTextA(h, s.data(), len + 1);
-    return s;
+    std::wstring ws(static_cast<std::size_t>(len + 1), L'\0');
+    GetWindowTextW(h, ws.data(), len + 1);
+    ws.resize(static_cast<std::size_t>(len));
+    return WideToUtf8(ws);
+}
+
+LRESULT ListBoxAddStringUtf8(HWND list, const std::string& text) {
+    const std::wstring w = Utf8ToWide(text);
+    return SendMessageW(list, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(w.c_str()));
+}
+
+LRESULT ComboAddStringUtf8(HWND combo, const std::string& text) {
+    const std::wstring w = Utf8ToWide(text);
+    return SendMessageW(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(w.c_str()));
 }
 
 void SetFieldVisible(HWND label, HWND edit, bool visible) {
@@ -615,6 +803,22 @@ bool IsProfileMode() {
     return g_state.loaded && g_state.kind == AppState::LoadedKind::kProfileSav;
 }
 
+bool IsMrProfileMode() {
+    return g_state.loaded && g_state.kind == AppState::LoadedKind::kMrProfileSav;
+}
+
+bool IsMrTimesMode() {
+    return g_state.loaded && g_state.kind == AppState::LoadedKind::kMrTimesSav;
+}
+
+bool IsMrSeg0Mode() {
+    return g_state.loaded && g_state.kind == AppState::LoadedKind::kMrSeg0Sav;
+}
+
+bool IsMainOnlyMode() {
+    return g_state.loaded && g_state.kind != AppState::LoadedKind::kMissionSave;
+}
+
 void SetMainLabelsMissionMode() {
     SetText(g_ui.mainTitle, "Main Save Fields");
     SetText(g_ui.hpLabel, "HP %:");
@@ -627,12 +831,42 @@ void SetMainLabelsMissionMode() {
 
 void SetMainLabelsProfileMode() {
     SetText(g_ui.mainTitle, "Profile .sav Fields");
-    SetText(g_ui.hpLabel, "Freeride mode (core[17]):");
-    SetText(g_ui.dateLabel, "Extreme cars (core[18]):");
-    SetText(g_ui.timeLabel, "Unlocked car groups (core[20]):");
+    SetText(g_ui.hpLabel, "Slot/mode (core[17], LS[25]):");
+    SetText(g_ui.dateLabel, "Extreme cars flags (core[18], LS[26]):");
+    SetText(g_ui.timeLabel, "Unlocked car groups (core[20], LS[28]):");
     SetText(g_ui.slotLabel, "Profile ID:");
-    SetText(g_ui.mcodeLabel, "Reserved (core[3]):");
+    SetText(g_ui.mcodeLabel, "Reserved (core[3], LS[11]):");
     SetText(g_ui.mnameLabel, "Tag (core[4..11], 32 chars):");
+}
+
+void SetMainLabelsMrProfileMode() {
+    SetText(g_ui.mainTitle, "mrXXX.sav Fields");
+    SetText(g_ui.hpLabel, "Word index:");
+    SetText(g_ui.dateLabel, "Word value:");
+    SetText(g_ui.timeLabel, "Word hex:");
+    SetText(g_ui.slotLabel, "Total words:");
+    SetText(g_ui.mcodeLabel, "File size:");
+    SetText(g_ui.mnameLabel, "Notes:");
+}
+
+void SetMainLabelsMrTimesMode() {
+    SetText(g_ui.mainTitle, "mrtimes.sav Fields");
+    SetText(g_ui.hpLabel, "Record index:");
+    SetText(g_ui.dateLabel, "Name (32):");
+    SetText(g_ui.timeLabel, "Param A:");
+    SetText(g_ui.slotLabel, "Best time (cs):");
+    SetText(g_ui.mcodeLabel, "Header count:");
+    SetText(g_ui.mnameLabel, "Records summary:");
+}
+
+void SetMainLabelsMrSeg0Mode() {
+    SetText(g_ui.mainTitle, "mrseg0.sav Fields");
+    SetText(g_ui.hpLabel, "Point index:");
+    SetText(g_ui.dateLabel, "Pos X:");
+    SetText(g_ui.timeLabel, "Pos Y:");
+    SetText(g_ui.slotLabel, "Pos Z:");
+    SetText(g_ui.mcodeLabel, "Header A,B,C:");
+    SetText(g_ui.mnameLabel, "Path stats:");
 }
 
 void SetStatus(const std::string& s) {
@@ -640,7 +874,8 @@ void SetStatus(const std::string& s) {
 }
 
 void Error(HWND hwnd, const std::string& s) {
-    MessageBoxA(hwnd, s.c_str(), "Mafia Save Editor", MB_OK | MB_ICONERROR);
+    const std::wstring ws = Utf8ToWide(s);
+    MessageBoxW(hwnd, ws.c_str(), L"Mafia Save Editor", MB_OK | MB_ICONERROR);
 }
 
 bool ParseU32(const std::string& s, std::uint32_t* out, std::string* err, const char* name) {
@@ -744,7 +979,11 @@ std::string ReadCStr(const std::vector<std::uint8_t>& data, std::size_t off, std
     while (off + len < end && data[off + len] != 0) {
         ++len;
     }
-    return std::string(reinterpret_cast<const char*>(data.data() + off), len);
+    return DecodeBytesCp1252ToUtf8(data.data() + off, len);
+}
+
+bool IsPrintableAnsiByte(std::uint8_t b) {
+    return b >= 32u && b != 127u;
 }
 
 bool WriteCStr(std::vector<std::uint8_t>* data, std::size_t off, std::size_t cap, const std::string& value, std::string* err) {
@@ -754,7 +993,11 @@ bool WriteCStr(std::vector<std::uint8_t>* data, std::size_t off, std::size_t cap
         }
         return false;
     }
-    if (value.empty() || value.size() + 1 > cap) {
+    std::vector<std::uint8_t> encoded;
+    if (!EncodeUtf8ToGameBytes(value, &encoded, err)) {
+        return false;
+    }
+    if (encoded.empty() || encoded.size() + 1 > cap) {
         if (err != nullptr) {
             *err = "string is empty or too long";
         }
@@ -763,8 +1006,8 @@ bool WriteCStr(std::vector<std::uint8_t>* data, std::size_t off, std::size_t cap
     std::fill(data->begin() + static_cast<std::ptrdiff_t>(off),
               data->begin() + static_cast<std::ptrdiff_t>(off + cap),
               static_cast<std::uint8_t>(0));
-    for (std::size_t i = 0; i < value.size(); ++i) {
-        (*data)[off + i] = static_cast<std::uint8_t>(value[i]);
+    for (std::size_t i = 0; i < encoded.size(); ++i) {
+        (*data)[off + i] = encoded[i];
     }
     return true;
 }
@@ -774,19 +1017,60 @@ std::string ReadAsciiTag(const std::vector<std::uint8_t>& data, std::size_t off,
         return {};
     }
     const std::size_t end = std::min(data.size(), off + cap);
-    std::string out;
-    out.reserve(cap);
+    std::vector<std::uint8_t> raw;
+    raw.reserve(cap);
     for (std::size_t i = off; i < end; ++i) {
-        const char ch = static_cast<char>(data[i]);
-        if (ch == '\0') {
+        const std::uint8_t b = data[i];
+        if (b == 0u) {
             break;
         }
-        if (static_cast<unsigned char>(ch) < 32u || static_cast<unsigned char>(ch) > 126u) {
+        if (!IsPrintableAnsiByte(b)) {
             break;
         }
-        out.push_back(ch);
+        raw.push_back(b);
     }
+    std::string out = DecodeBytesCp1252ToUtf8(raw.data(), raw.size());
     return Trim(out);
+}
+
+std::string ReadAsciiTag(const std::array<std::uint8_t, 32>& data) {
+    std::vector<std::uint8_t> raw;
+    raw.reserve(data.size());
+    for (std::uint8_t b : data) {
+        if (b == 0u) {
+            break;
+        }
+        if (!IsPrintableAnsiByte(b)) {
+            break;
+        }
+        raw.push_back(b);
+    }
+    std::string out = DecodeBytesCp1252ToUtf8(raw.data(), raw.size());
+    return Trim(out);
+}
+
+bool WriteAsciiTag(std::array<std::uint8_t, 32>* data, const std::string& value, std::string* err) {
+    if (data == nullptr) {
+        if (err != nullptr) {
+            *err = "name field is null";
+        }
+        return false;
+    }
+    std::vector<std::uint8_t> encoded;
+    if (!EncodeUtf8ToGameBytes(value, &encoded, err)) {
+        return false;
+    }
+    if (encoded.size() > data->size()) {
+        if (err != nullptr) {
+            *err = "name is too long (max 32)";
+        }
+        return false;
+    }
+    data->fill(0u);
+    for (std::size_t i = 0; i < encoded.size(); ++i) {
+        (*data)[i] = encoded[i];
+    }
+    return true;
 }
 
 bool WriteAsciiTag(std::vector<std::uint8_t>* data, std::size_t off, std::size_t cap, const std::string& value, std::string* err) {
@@ -796,7 +1080,11 @@ bool WriteAsciiTag(std::vector<std::uint8_t>* data, std::size_t off, std::size_t
         }
         return false;
     }
-    if (value.size() > cap) {
+    std::vector<std::uint8_t> encoded;
+    if (!EncodeUtf8ToGameBytes(value, &encoded, err)) {
+        return false;
+    }
+    if (encoded.size() > cap) {
         if (err != nullptr) {
             *err = "tag too long";
         }
@@ -805,15 +1093,8 @@ bool WriteAsciiTag(std::vector<std::uint8_t>* data, std::size_t off, std::size_t
     std::fill(data->begin() + static_cast<std::ptrdiff_t>(off),
               data->begin() + static_cast<std::ptrdiff_t>(off + cap),
               static_cast<std::uint8_t>(0));
-    for (std::size_t i = 0; i < value.size(); ++i) {
-        const unsigned char ch = static_cast<unsigned char>(value[i]);
-        if (ch < 32u || ch > 126u) {
-            if (err != nullptr) {
-                *err = "tag must contain printable ASCII only";
-            }
-            return false;
-        }
-        (*data)[off + i] = static_cast<std::uint8_t>(ch);
+    for (std::size_t i = 0; i < encoded.size(); ++i) {
+        (*data)[off + i] = encoded[i];
     }
     return true;
 }
@@ -1053,7 +1334,18 @@ std::optional<ProgramLocation> DetectProgramInSave(const mafia_save::SaveData& s
 
 constexpr std::size_t kHumanBlobOff = 13;
 constexpr std::size_t kHumanBlobSize = 382;
+constexpr std::size_t kHumanPropsCurrentOff = kHumanBlobOff + 229;
+constexpr std::size_t kHumanPropsInitOff = kHumanBlobOff + 293;
+constexpr std::size_t kHumanCurrentHealthOff = kHumanPropsCurrentOff + 4;
+constexpr std::size_t kHumanMaxHealthOff = kHumanPropsInitOff + 4;
 constexpr std::size_t kInventoryBlobSize = 196;
+
+constexpr const char* kHumanPropNames[16] = {
+    "Strength",      "Health",      "Health Hand L", "Health Hand R",
+    "Health Leg L",  "Health Leg R","Reactions",     "Speed",
+    "Aggresivity",   "Intelligence","Shooting",      "Sight",
+    "Hearing",       "Driving",     "Mass",          "Morale",
+};
 
 std::uint32_t ReadInvDw(const std::vector<std::uint8_t>& p, std::size_t invOff, std::size_t idx) {
     return mafia_save::ReadU32LE(p, invOff + (idx * 4));
@@ -1244,6 +1536,8 @@ struct CoordLayout {
     bool carEngineFlagsSupported = false;
     bool carOdometerSupported = false;
     bool humanStateSupported = false;
+    bool humanHealthSupported = false;
+    bool humanPropsSupported = false;
     bool humanInventorySupported = false;
     std::size_t stateOff = 1;
     std::size_t idOff = 2;
@@ -1279,6 +1573,10 @@ struct CoordLayout {
     std::size_t humanShootXOff = 0;
     std::size_t humanShootYOff = 0;
     std::size_t humanShootZOff = 0;
+    std::size_t humanPropsCurrentOff = 0;
+    std::size_t humanPropsInitOff = 0;
+    std::size_t humanHpCurrentOff = 0;
+    std::size_t humanHpMaxOff = 0;
     std::size_t humanInventoryOff = 0;
     std::string hint;
 };
@@ -1296,6 +1594,97 @@ std::string FormatTime(std::uint32_t packed) {
     char buf[32] = {};
     std::snprintf(buf, sizeof(buf), "%02d:%02d:%02d", hh, mm, ss);
     return buf;
+}
+
+std::string FormatU32AsF32(std::uint32_t bits) {
+    float v = 0.0f;
+    std::memcpy(&v, &bits, sizeof(v));
+    return FormatFloat3(v);
+}
+
+std::string FormatCentiseconds(std::uint32_t value) {
+    const std::uint32_t cs = value % 100u;
+    const std::uint32_t totalSec = value / 100u;
+    const std::uint32_t sec = totalSec % 60u;
+    const std::uint32_t min = (totalSec / 60u) % 60u;
+    const std::uint32_t hr = (totalSec / 3600u);
+    char buf[32] = {};
+    if (hr > 0u) {
+        std::snprintf(buf, sizeof(buf), "%u:%02u:%02u.%02u", static_cast<unsigned>(hr), static_cast<unsigned>(min),
+                      static_cast<unsigned>(sec), static_cast<unsigned>(cs));
+    } else {
+        std::snprintf(buf, sizeof(buf), "%02u:%02u.%02u", static_cast<unsigned>(min), static_cast<unsigned>(sec),
+                      static_cast<unsigned>(cs));
+    }
+    return buf;
+}
+
+double Distance3(float ax, float ay, float az, float bx, float by, float bz) {
+    const double dx = static_cast<double>(ax) - static_cast<double>(bx);
+    const double dy = static_cast<double>(ay) - static_cast<double>(by);
+    const double dz = static_cast<double>(az) - static_cast<double>(bz);
+    return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+std::string ProfileCoreWordName(std::size_t idx) {
+    switch (idx) {
+    case 0:
+        return "LS[8] magic forP";
+    case 1:
+        return "LS[9] version";
+    case 2:
+        return "LS[10] profile id";
+    case 3:
+        return "LS[11] reserved";
+    case 4:
+        return "LS[12] tag bytes 0..3";
+    case 5:
+        return "LS[13] tag bytes 4..7";
+    case 6:
+        return "LS[14] tag bytes 8..11";
+    case 7:
+        return "LS[15] tag bytes 12..15";
+    case 8:
+        return "LS[16] tag bytes 16..19";
+    case 9:
+        return "LS[17] tag bytes 20..23";
+    case 10:
+        return "LS[18] tag bytes 24..27";
+    case 11:
+        return "LS[19] tag bytes 28..31";
+    case 17:
+        return "LS[25] slot/mode";
+    case 18:
+        return "LS[26] extreme cars flags";
+    case 19:
+        return "LS[27] reserved";
+    case 20:
+        return "LS[28] unlocked car groups";
+    default:
+        break;
+    }
+    std::ostringstream oss;
+    oss << "LS[" << (8u + idx) << "]";
+    return oss.str();
+}
+
+std::string MrProfileWordMeaning(std::size_t idx, std::uint32_t value) {
+    if (idx == 0u) {
+        return "global racing profile state";
+    }
+    if (value == 0u) {
+        return "locked / empty";
+    }
+    if (value == 1u) {
+        return "active / in progress";
+    }
+    if (value == 2u) {
+        return "completed";
+    }
+    if (value > 2u) {
+        return "completed (flagged)";
+    }
+    return "-";
 }
 void RebuildActorIndex() {
     g_state.actorHeaders.clear();
@@ -1413,6 +1802,16 @@ CoordLayout DetectCoordLayout(std::size_t headerIdx) {
             layout.humanShootYOff = 58;
             layout.humanShootZOff = 62;
         }
+        if (p.size() >= (kHumanMaxHealthOff + 4)) {
+            layout.humanHealthSupported = true;
+            layout.humanHpCurrentOff = kHumanCurrentHealthOff;
+            layout.humanHpMaxOff = kHumanMaxHealthOff;
+        }
+        if (p.size() >= (kHumanPropsInitOff + 64)) {
+            layout.humanPropsSupported = true;
+            layout.humanPropsCurrentOff = kHumanPropsCurrentOff;
+            layout.humanPropsInitOff = kHumanPropsInitOff;
+        }
         std::size_t invOff = 0;
         if (FindHumanInventoryOffset(p, &invOff)) {
             layout.humanInventorySupported = true;
@@ -1487,6 +1886,19 @@ constexpr std::uint32_t kFreerideBaseMask = 0x02000000u;
 std::string FormatU32Hex(std::uint32_t value) {
     std::ostringstream oss;
     oss << "0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << value;
+    return oss.str();
+}
+
+std::string FormatU16Hex(std::uint16_t value) {
+    std::ostringstream oss;
+    oss << "0x" << std::uppercase << std::hex << std::setw(4) << std::setfill('0') << value;
+    return oss.str();
+}
+
+std::string FormatByteHex(std::uint8_t value) {
+    std::ostringstream oss;
+    oss << "0x" << std::uppercase << std::hex << std::setw(2) << std::setfill('0')
+        << static_cast<unsigned>(value);
     return oss.str();
 }
 
@@ -1673,6 +2085,826 @@ void RebuildProfileMaskGroups() {
     BuildProfileMaskGroups(false, &g_profileRaceGroups);
 }
 
+void ClearListColumns(HWND list) {
+    if (list == nullptr) {
+        return;
+    }
+    while (Header_GetItemCount(ListView_GetHeader(list)) > 0) {
+        ListView_DeleteColumn(list, 0);
+    }
+}
+
+void EnsureProfileWordsColumns() {
+    HWND list = g_ui.profileWordsTable;
+    if (list == nullptr) {
+        return;
+    }
+    const int cols = Header_GetItemCount(ListView_GetHeader(list));
+    if (cols == 7) {
+        return;
+    }
+    if (cols > 0) {
+        ClearListColumns(list);
+    }
+    LVCOLUMNA c = {};
+    c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+    c.cx = 72;
+    c.pszText = const_cast<char*>("LS idx");
+    c.iSubItem = 0;
+    ListView_InsertColumn(list, 0, &c);
+    c.cx = 80;
+    c.pszText = const_cast<char*>("Block");
+    c.iSubItem = 1;
+    ListView_InsertColumn(list, 1, &c);
+    c.cx = 66;
+    c.pszText = const_cast<char*>("Word");
+    c.iSubItem = 2;
+    ListView_InsertColumn(list, 2, &c);
+    c.cx = 220;
+    c.pszText = const_cast<char*>("Name");
+    c.iSubItem = 3;
+    ListView_InsertColumn(list, 3, &c);
+    c.cx = 120;
+    c.pszText = const_cast<char*>("Value");
+    c.iSubItem = 4;
+    ListView_InsertColumn(list, 4, &c);
+    c.cx = 100;
+    c.pszText = const_cast<char*>("Hex");
+    c.iSubItem = 5;
+    ListView_InsertColumn(list, 5, &c);
+    c.cx = 96;
+    c.pszText = const_cast<char*>("F32");
+    c.iSubItem = 6;
+    ListView_InsertColumn(list, 6, &c);
+}
+
+void EnsureMrProfileColumns() {
+    HWND list = g_ui.mrProfileTable;
+    if (list == nullptr) {
+        return;
+    }
+    const int cols = Header_GetItemCount(ListView_GetHeader(list));
+    if (cols == 4) {
+        return;
+    }
+    if (cols > 0) {
+        ClearListColumns(list);
+    }
+    LVCOLUMNA c = {};
+    c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+    c.cx = 80;
+    c.pszText = const_cast<char*>("Index");
+    c.iSubItem = 0;
+    ListView_InsertColumn(list, 0, &c);
+    c.cx = 180;
+    c.pszText = const_cast<char*>("Value");
+    c.iSubItem = 1;
+    ListView_InsertColumn(list, 1, &c);
+    c.cx = 140;
+    c.pszText = const_cast<char*>("Hex");
+    c.iSubItem = 2;
+    ListView_InsertColumn(list, 2, &c);
+    c.cx = 190;
+    c.pszText = const_cast<char*>("Meaning");
+    c.iSubItem = 3;
+    ListView_InsertColumn(list, 3, &c);
+}
+
+void EnsureMrTimesColumns() {
+    HWND list = g_ui.mrTimesTable;
+    if (list == nullptr) {
+        return;
+    }
+    const int cols = Header_GetItemCount(ListView_GetHeader(list));
+    if (cols == 5) {
+        return;
+    }
+    if (cols > 0) {
+        ClearListColumns(list);
+    }
+    LVCOLUMNA c = {};
+    c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+    c.cx = 60;
+    c.pszText = const_cast<char*>("Index");
+    c.iSubItem = 0;
+    ListView_InsertColumn(list, 0, &c);
+    c.cx = 220;
+    c.pszText = const_cast<char*>("Driver");
+    c.iSubItem = 1;
+    ListView_InsertColumn(list, 1, &c);
+    c.cx = 110;
+    c.pszText = const_cast<char*>("Param A");
+    c.iSubItem = 2;
+    ListView_InsertColumn(list, 2, &c);
+    c.cx = 110;
+    c.pszText = const_cast<char*>("Best time (cs)");
+    c.iSubItem = 3;
+    ListView_InsertColumn(list, 3, &c);
+    c.cx = 120;
+    c.pszText = const_cast<char*>("Best time");
+    c.iSubItem = 4;
+    ListView_InsertColumn(list, 4, &c);
+}
+
+void EnsureMrSeg0Columns() {
+    HWND list = g_ui.mrSeg0Table;
+    if (list == nullptr) {
+        return;
+    }
+    const int cols = Header_GetItemCount(ListView_GetHeader(list));
+    if (cols == 6) {
+        return;
+    }
+    if (cols > 0) {
+        ClearListColumns(list);
+    }
+    LVCOLUMNA c = {};
+    c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+    c.cx = 70;
+    c.pszText = const_cast<char*>("Index");
+    c.iSubItem = 0;
+    ListView_InsertColumn(list, 0, &c);
+    c.cx = 120;
+    c.pszText = const_cast<char*>("X");
+    c.iSubItem = 1;
+    ListView_InsertColumn(list, 1, &c);
+    c.cx = 120;
+    c.pszText = const_cast<char*>("Y");
+    c.iSubItem = 2;
+    ListView_InsertColumn(list, 2, &c);
+    c.cx = 120;
+    c.pszText = const_cast<char*>("Z");
+    c.iSubItem = 3;
+    ListView_InsertColumn(list, 3, &c);
+    c.cx = 110;
+    c.pszText = const_cast<char*>("Dist");
+    c.iSubItem = 4;
+    ListView_InsertColumn(list, 4, &c);
+    c.cx = 110;
+    c.pszText = const_cast<char*>("Total");
+    c.iSubItem = 5;
+    ListView_InsertColumn(list, 5, &c);
+}
+
+void SelectListRow(HWND list, int row) {
+    if (list == nullptr) {
+        return;
+    }
+    const int count = ListView_GetItemCount(list);
+    if (count <= 0) {
+        return;
+    }
+    const int clamped = std::clamp(row, 0, count - 1);
+    ListView_SetItemState(list, -1, 0, LVIS_SELECTED | LVIS_FOCUSED);
+    ListView_SetItemState(list, clamped, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+    ListView_EnsureVisible(list, clamped, FALSE);
+}
+
+void EnsureHumanPropsColumns() {
+    HWND list = g_ui.humanPropsTable;
+    if (list == nullptr) {
+        return;
+    }
+    if (Header_GetItemCount(ListView_GetHeader(list)) > 0) {
+        return;
+    }
+    LVCOLUMNA c = {};
+    c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+    c.cx = 42;
+    c.pszText = const_cast<char*>("I");
+    c.iSubItem = 0;
+    ListView_InsertColumn(list, 0, &c);
+    c.cx = 130;
+    c.pszText = const_cast<char*>("Property");
+    c.iSubItem = 1;
+    ListView_InsertColumn(list, 1, &c);
+    c.cx = 95;
+    c.pszText = const_cast<char*>("Current");
+    c.iSubItem = 2;
+    ListView_InsertColumn(list, 2, &c);
+    c.cx = 95;
+    c.pszText = const_cast<char*>("Init");
+    c.iSubItem = 3;
+    ListView_InsertColumn(list, 3, &c);
+}
+
+void FillHumanPropsTable(const std::vector<std::uint8_t>& p, const CoordLayout& layout) {
+    if (g_ui.humanPropsTable == nullptr) {
+        return;
+    }
+    if (!layout.humanPropsSupported) {
+        ListView_DeleteAllItems(g_ui.humanPropsTable);
+        g_suppressHumanPropEvents = true;
+        SetText(g_ui.humanPropIndex, "");
+        SetText(g_ui.humanPropName, "");
+        SetText(g_ui.humanPropCur, "");
+        SetText(g_ui.humanPropInit, "");
+        g_suppressHumanPropEvents = false;
+        return;
+    }
+    EnsureHumanPropsColumns();
+    ListView_DeleteAllItems(g_ui.humanPropsTable);
+    for (int i = 0; i < 16; ++i) {
+        LVITEMA item = {};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = i;
+        item.iSubItem = 0;
+        std::string idx = std::to_string(i);
+        item.pszText = idx.data();
+        item.lParam = static_cast<LPARAM>(i);
+        const int row = ListView_InsertItem(g_ui.humanPropsTable, &item);
+        if (row < 0) {
+            continue;
+        }
+        const float cur = ReadF32LE(p, layout.humanPropsCurrentOff + (static_cast<std::size_t>(i) * 4u));
+        const float ini = ReadF32LE(p, layout.humanPropsInitOff + (static_cast<std::size_t>(i) * 4u));
+        std::string name = kHumanPropNames[i];
+        std::string curText = FormatFloat3(cur);
+        std::string initText = FormatFloat3(ini);
+        ListView_SetItemText(g_ui.humanPropsTable, row, 1, name.data());
+        ListView_SetItemText(g_ui.humanPropsTable, row, 2, curText.data());
+        ListView_SetItemText(g_ui.humanPropsTable, row, 3, initText.data());
+    }
+    const int idx = std::clamp(g_state.selectedHumanProp, 0, 15);
+    g_state.selectedHumanProp = idx;
+    g_suppressHumanPropEvents = true;
+    SelectListRow(g_ui.humanPropsTable, idx);
+    SetText(g_ui.humanPropIndex, std::to_string(idx));
+    SetText(g_ui.humanPropName, kHumanPropNames[idx]);
+    SetText(g_ui.humanPropCur, FormatFloat3(ReadF32LE(p, layout.humanPropsCurrentOff + (static_cast<std::size_t>(idx) * 4u))));
+    SetText(g_ui.humanPropInit, FormatFloat3(ReadF32LE(p, layout.humanPropsInitOff + (static_cast<std::size_t>(idx) * 4u))));
+    g_suppressHumanPropEvents = false;
+}
+
+bool ApplySelectedHumanPropEdit(std::string* err) {
+    const auto segIdxOpt = CurrentSelectedActorSegIdx();
+    if (!IsMissionMode() || !segIdxOpt.has_value()) {
+        if (err != nullptr) {
+            *err = "actor is not selected";
+        }
+        return false;
+    }
+    const std::size_t segIdx = *segIdxOpt;
+    if (!IsActorPairAt(segIdx)) {
+        if (err != nullptr) {
+            *err = "actor payload pair is missing";
+        }
+        return false;
+    }
+    const CoordLayout layout = DetectCoordLayout(segIdx);
+    if (!layout.humanPropsSupported) {
+        if (err != nullptr) {
+            *err = "human properties are not available for this actor";
+        }
+        return false;
+    }
+    std::uint32_t idx = 0;
+    float cur = 0.0f;
+    float ini = 0.0f;
+    if (!ParseU32Auto(Trim(GetText(g_ui.humanPropIndex)), &idx, err, "Prop index")) {
+        return false;
+    }
+    if (idx >= 16u) {
+        if (err != nullptr) {
+            *err = "prop index must be 0..15";
+        }
+        return false;
+    }
+    if (!ParseF32(Trim(GetText(g_ui.humanPropCur)), &cur, err, "Current value")) {
+        return false;
+    }
+    if (!ParseF32(Trim(GetText(g_ui.humanPropInit)), &ini, err, "Init value")) {
+        return false;
+    }
+    auto& p = g_state.save.segments[segIdx + 1].plain;
+    const std::size_t offCur = layout.humanPropsCurrentOff + (static_cast<std::size_t>(idx) * 4u);
+    const std::size_t offIni = layout.humanPropsInitOff + (static_cast<std::size_t>(idx) * 4u);
+    WriteF32LE(&p, offCur, cur);
+    WriteF32LE(&p, offIni, ini);
+    g_state.selectedHumanProp = static_cast<int>(idx);
+    return true;
+}
+
+int GetActorRawScope() {
+    if (g_ui.actorRawScope != nullptr) {
+        const LRESULT sel = SendMessageA(g_ui.actorRawScope, CB_GETCURSEL, 0, 0);
+        if (sel == 0 || sel == 1) {
+            return static_cast<int>(sel);
+        }
+    }
+    return (g_state.actorRawScope == 0) ? 0 : 1;
+}
+
+void SetActorRawScope(int scope) {
+    g_state.actorRawScope = (scope == 0) ? 0 : 1;
+    if (g_ui.actorRawScope != nullptr) {
+        SendMessageA(g_ui.actorRawScope, CB_SETCURSEL, static_cast<WPARAM>(g_state.actorRawScope), 0);
+    }
+}
+
+const std::vector<std::uint8_t>* CurrentActorRawBuffer(std::size_t* outSegIdx = nullptr, std::string* outSegName = nullptr) {
+    const auto segIdxOpt = CurrentSelectedActorSegIdx();
+    if (!g_state.loaded || !segIdxOpt.has_value()) {
+        return nullptr;
+    }
+    std::size_t segIdx = *segIdxOpt;
+    const int scope = GetActorRawScope();
+    if (scope == 1) {
+        if (!IsActorPairAt(segIdx)) {
+            return nullptr;
+        }
+        ++segIdx;
+    }
+    if (segIdx >= g_state.save.segments.size()) {
+        return nullptr;
+    }
+    if (outSegIdx != nullptr) {
+        *outSegIdx = segIdx;
+    }
+    if (outSegName != nullptr) {
+        *outSegName = g_state.save.segments[segIdx].name;
+    }
+    return &g_state.save.segments[segIdx].plain;
+}
+
+std::vector<std::uint8_t>* CurrentActorRawBufferMutable(std::size_t* outSegIdx = nullptr, std::string* outSegName = nullptr) {
+    const auto segIdxOpt = CurrentSelectedActorSegIdx();
+    if (!g_state.loaded || !segIdxOpt.has_value()) {
+        return nullptr;
+    }
+    std::size_t segIdx = *segIdxOpt;
+    const int scope = GetActorRawScope();
+    if (scope == 1) {
+        if (!IsActorPairAt(segIdx)) {
+            return nullptr;
+        }
+        ++segIdx;
+    }
+    if (segIdx >= g_state.save.segments.size()) {
+        return nullptr;
+    }
+    if (outSegIdx != nullptr) {
+        *outSegIdx = segIdx;
+    }
+    if (outSegName != nullptr) {
+        *outSegName = g_state.save.segments[segIdx].name;
+    }
+    return &g_state.save.segments[segIdx].plain;
+}
+
+void EnsureActorRawColumns() {
+    HWND list = g_ui.actorRawTable;
+    if (list == nullptr) {
+        return;
+    }
+    if (Header_GetItemCount(ListView_GetHeader(list)) > 0) {
+        return;
+    }
+    LVCOLUMNA c = {};
+    c.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+    c.cx = 70;
+    c.pszText = const_cast<char*>("Offset");
+    c.iSubItem = 0;
+    ListView_InsertColumn(list, 0, &c);
+    c.cx = 90;
+    c.pszText = const_cast<char*>("Offset hex");
+    c.iSubItem = 1;
+    ListView_InsertColumn(list, 1, &c);
+    c.cx = 70;
+    c.pszText = const_cast<char*>("Byte");
+    c.iSubItem = 2;
+    ListView_InsertColumn(list, 2, &c);
+    c.cx = 100;
+    c.pszText = const_cast<char*>("U16");
+    c.iSubItem = 3;
+    ListView_InsertColumn(list, 3, &c);
+    c.cx = 120;
+    c.pszText = const_cast<char*>("U32");
+    c.iSubItem = 4;
+    ListView_InsertColumn(list, 4, &c);
+    c.cx = 120;
+    c.pszText = const_cast<char*>("F32");
+    c.iSubItem = 5;
+    ListView_InsertColumn(list, 5, &c);
+    c.cx = 60;
+    c.pszText = const_cast<char*>("Char");
+    c.iSubItem = 6;
+    ListView_InsertColumn(list, 6, &c);
+}
+
+void UpdateActorRawEditorsFromOffset() {
+    const auto* data = CurrentActorRawBuffer();
+    if (data == nullptr) {
+        SetText(g_ui.actorRawByte, "");
+        SetText(g_ui.actorRawU32, "");
+        SetText(g_ui.actorRawF32, "");
+        return;
+    }
+
+    std::uint32_t off = 0;
+    if (!ParseU32Auto(Trim(GetText(g_ui.actorRawOffset)), &off, nullptr, "Raw offset") || off >= data->size()) {
+        SetText(g_ui.actorRawByte, "");
+        SetText(g_ui.actorRawU32, "");
+        SetText(g_ui.actorRawF32, "");
+        return;
+    }
+    g_state.actorRawOffset = static_cast<int>(off);
+    SetText(g_ui.actorRawByte, FormatByteHex((*data)[off]));
+    if (off + 4u <= data->size()) {
+        const std::uint32_t u32 = mafia_save::ReadU32LE(*data, off);
+        SetText(g_ui.actorRawU32, std::to_string(u32));
+        SetText(g_ui.actorRawF32, FormatFloat3(ReadF32LE(*data, off)));
+    } else {
+        SetText(g_ui.actorRawU32, "");
+        SetText(g_ui.actorRawF32, "");
+    }
+}
+
+void FillActorRawTable() {
+    if (g_ui.actorRawTable == nullptr) {
+        return;
+    }
+    EnsureActorRawColumns();
+    ListView_DeleteAllItems(g_ui.actorRawTable);
+    SetActorRawScope(GetActorRawScope());
+
+    std::size_t segIdx = 0;
+    std::string segName;
+    const auto* data = CurrentActorRawBuffer(&segIdx, &segName);
+    if (!IsMissionMode() || data == nullptr) {
+        SetText(g_ui.actorRawHint, "Raw actor data: actor or segment not available");
+        SetText(g_ui.actorRawOffset, "");
+        SetText(g_ui.actorRawByte, "");
+        SetText(g_ui.actorRawU32, "");
+        SetText(g_ui.actorRawF32, "");
+        return;
+    }
+
+    for (std::size_t off = 0; off < data->size(); ++off) {
+        LVITEMA item = {};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = static_cast<int>(off);
+        item.iSubItem = 0;
+        std::string offDec = std::to_string(off);
+        item.pszText = offDec.data();
+        item.lParam = static_cast<LPARAM>(off);
+        const int row = ListView_InsertItem(g_ui.actorRawTable, &item);
+        if (row < 0) {
+            continue;
+        }
+
+        std::ostringstream offHex;
+        offHex << "0x" << std::uppercase << std::hex << std::setw(4) << std::setfill('0') << off;
+        std::string byteHex = FormatByteHex((*data)[off]);
+        std::string u16 = "";
+        std::string u32 = "";
+        std::string f32 = "";
+        if (off + 2u <= data->size()) {
+            const std::uint16_t v16 = static_cast<std::uint16_t>((*data)[off] | (static_cast<std::uint16_t>((*data)[off + 1]) << 8));
+            u16 = FormatU16Hex(v16);
+        }
+        if (off + 4u <= data->size()) {
+            const std::uint32_t v32 = mafia_save::ReadU32LE(*data, off);
+            u32 = std::to_string(v32);
+            f32 = FormatFloat3(ReadF32LE(*data, off));
+        }
+        const unsigned char ch = (*data)[off];
+        std::string ascii(1, std::isprint(ch) ? static_cast<char>(ch) : '.');
+
+        std::string offHexText = offHex.str();
+        ListView_SetItemText(g_ui.actorRawTable, row, 1, offHexText.data());
+        ListView_SetItemText(g_ui.actorRawTable, row, 2, byteHex.data());
+        ListView_SetItemText(g_ui.actorRawTable, row, 3, u16.data());
+        ListView_SetItemText(g_ui.actorRawTable, row, 4, u32.data());
+        ListView_SetItemText(g_ui.actorRawTable, row, 5, f32.data());
+        ListView_SetItemText(g_ui.actorRawTable, row, 6, ascii.data());
+    }
+
+    const int rowCount = ListView_GetItemCount(g_ui.actorRawTable);
+    if (rowCount > 0) {
+        const int row = std::clamp(g_state.actorRawOffset, 0, rowCount - 1);
+        g_state.actorRawOffset = row;
+        SetText(g_ui.actorRawOffset, std::to_string(row));
+        SelectListRow(g_ui.actorRawTable, row);
+    } else {
+        SetText(g_ui.actorRawOffset, "");
+    }
+    UpdateActorRawEditorsFromOffset();
+
+    std::ostringstream hint;
+    hint << segName << " | size=" << data->size() << " bytes | seg#" << segIdx;
+    SetText(g_ui.actorRawHint, hint.str());
+}
+
+void FillActorRawActorList() {
+    if (g_ui.actorRawActors == nullptr) {
+        return;
+    }
+    SendMessageA(g_ui.actorRawActors, LB_RESETCONTENT, 0, 0);
+    if (!IsMissionMode()) {
+        FillActorRawTable();
+        return;
+    }
+    for (std::size_t i = 0; i < g_state.filteredActorHeaders.size(); ++i) {
+        const std::string row = BuildActorRow(g_state.filteredActorHeaders[i]);
+        ListBoxAddStringUtf8(g_ui.actorRawActors, row);
+    }
+    if (g_state.selectedActor >= 0 && g_state.selectedActor < static_cast<int>(g_state.filteredActorHeaders.size())) {
+        SendMessageA(g_ui.actorRawActors, LB_SETCURSEL, static_cast<WPARAM>(g_state.selectedActor), 0);
+    }
+    FillActorRawTable();
+}
+
+bool ApplyActorRawByte(std::string* err) {
+    auto* data = CurrentActorRawBufferMutable();
+    if (data == nullptr) {
+        if (err != nullptr) {
+            *err = "raw segment is not available";
+        }
+        return false;
+    }
+    std::uint32_t off = 0;
+    std::uint32_t val = 0;
+    if (!ParseU32Auto(Trim(GetText(g_ui.actorRawOffset)), &off, err, "Raw offset")) {
+        return false;
+    }
+    if (off >= data->size()) {
+        if (err != nullptr) {
+            *err = "raw offset is out of range";
+        }
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.actorRawByte)), &val, err, "Raw byte")) {
+        return false;
+    }
+    if (val > 0xFFu) {
+        if (err != nullptr) {
+            *err = "raw byte must be <= 0xFF";
+        }
+        return false;
+    }
+    (*data)[off] = static_cast<std::uint8_t>(val);
+    g_state.actorRawOffset = static_cast<int>(off);
+    return true;
+}
+
+bool ApplyActorRawU32(std::string* err) {
+    auto* data = CurrentActorRawBufferMutable();
+    if (data == nullptr) {
+        if (err != nullptr) {
+            *err = "raw segment is not available";
+        }
+        return false;
+    }
+    std::uint32_t off = 0;
+    std::uint32_t val = 0;
+    if (!ParseU32Auto(Trim(GetText(g_ui.actorRawOffset)), &off, err, "Raw offset")) {
+        return false;
+    }
+    if (off + 4u > data->size()) {
+        if (err != nullptr) {
+            *err = "raw offset for U32 is out of range";
+        }
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.actorRawU32)), &val, err, "Raw U32")) {
+        return false;
+    }
+    mafia_save::WriteU32LE(data, off, val);
+    g_state.actorRawOffset = static_cast<int>(off);
+    return true;
+}
+
+bool ApplyActorRawF32(std::string* err) {
+    auto* data = CurrentActorRawBufferMutable();
+    if (data == nullptr) {
+        if (err != nullptr) {
+            *err = "raw segment is not available";
+        }
+        return false;
+    }
+    std::uint32_t off = 0;
+    float val = 0.0f;
+    if (!ParseU32Auto(Trim(GetText(g_ui.actorRawOffset)), &off, err, "Raw offset")) {
+        return false;
+    }
+    if (off + 4u > data->size()) {
+        if (err != nullptr) {
+            *err = "raw offset for F32 is out of range";
+        }
+        return false;
+    }
+    if (!ParseF32(Trim(GetText(g_ui.actorRawF32)), &val, err, "Raw F32")) {
+        return false;
+    }
+    WriteF32LE(data, off, val);
+    g_state.actorRawOffset = static_cast<int>(off);
+    return true;
+}
+
+void RefreshProfileWordsTable() {
+    if (g_ui.profileWordsTable == nullptr) {
+        return;
+    }
+    if (!IsProfileMode()) {
+        ListView_DeleteAllItems(g_ui.profileWordsTable);
+        return;
+    }
+    EnsureProfileWordsColumns();
+    ListView_DeleteAllItems(g_ui.profileWordsTable);
+
+    auto ascii4 = [](const std::vector<std::uint8_t>& data, std::size_t off) -> std::string {
+        std::string out;
+        if (off + 4u > data.size()) {
+            return "....";
+        }
+        out.reserve(4);
+        for (std::size_t i = 0; i < 4u; ++i) {
+            const unsigned char ch = data[off + i];
+            out.push_back((ch >= 32u && ch <= 126u) ? static_cast<char>(ch) : '.');
+        }
+        return out;
+    };
+
+    auto addRow = [&](std::uint32_t lsIdx,
+                      const char* block,
+                      std::size_t wordIdx,
+                      const std::string& name,
+                      std::uint32_t value) {
+        LVITEMA item = {};
+        item.mask = LVIF_TEXT;
+        item.iItem = ListView_GetItemCount(g_ui.profileWordsTable);
+        item.iSubItem = 0;
+        std::string ls = std::to_string(lsIdx);
+        item.pszText = ls.data();
+        const int row = ListView_InsertItem(g_ui.profileWordsTable, &item);
+        if (row < 0) {
+            return;
+        }
+
+        std::string blockText(block);
+        std::string idxText = std::to_string(wordIdx);
+        std::string valText = std::to_string(value);
+        std::string hexText = FormatU32Hex(value);
+        std::string f32Text = FormatU32AsF32(value);
+
+        ListView_SetItemText(g_ui.profileWordsTable, row, 1, blockText.data());
+        ListView_SetItemText(g_ui.profileWordsTable, row, 2, idxText.data());
+        ListView_SetItemText(g_ui.profileWordsTable, row, 3, const_cast<char*>(name.c_str()));
+        ListView_SetItemText(g_ui.profileWordsTable, row, 4, valText.data());
+        ListView_SetItemText(g_ui.profileWordsTable, row, 5, hexText.data());
+        ListView_SetItemText(g_ui.profileWordsTable, row, 6, f32Text.data());
+    };
+
+    const auto& c = g_state.profile.core84;
+    for (std::size_t i = 0; i + 4u <= c.size(); i += 4u) {
+        const std::size_t wordIdx = i / 4u;
+        const std::uint32_t value = profile_sav::ReadU32LE(c, i);
+        std::string name = ProfileCoreWordName(wordIdx);
+        if (wordIdx >= 4u && wordIdx <= 11u) {
+            name += " [";
+            name += ascii4(c, i);
+            name += "]";
+        }
+        addRow(static_cast<std::uint32_t>(8u + wordIdx), "core84", wordIdx, name, value);
+    }
+
+    const auto& b720 = g_state.profile.block720;
+    for (std::size_t i = 0; i + 4u <= b720.size(); i += 4u) {
+        const std::size_t wordIdx = i / 4u;
+        const std::uint32_t value = profile_sav::ReadU32LE(b720, i);
+        std::ostringstream name;
+        name << "LS[" << (125u + wordIdx) << "]";
+        addRow(static_cast<std::uint32_t>(125u + wordIdx), "block720", wordIdx, name.str(), value);
+    }
+
+    const auto& b92 = g_state.profile.block92;
+    for (std::size_t i = 0; i + 4u <= b92.size(); i += 4u) {
+        const std::size_t wordIdx = i / 4u;
+        const std::uint32_t value = profile_sav::ReadU32LE(b92, i);
+        std::ostringstream name;
+        name << "LS[" << (305u + wordIdx) << "]";
+        addRow(static_cast<std::uint32_t>(305u + wordIdx), "block92", wordIdx, name.str(), value);
+    }
+
+    const auto& b156 = g_state.profile.block156;
+    for (std::size_t i = 0; i + 4u <= b156.size(); i += 4u) {
+        const std::size_t wordIdx = i / 4u;
+        const std::uint32_t value = profile_sav::ReadU32LE(b156, i);
+        std::ostringstream name;
+        name << "LS[" << (328u + wordIdx) << "]";
+        addRow(static_cast<std::uint32_t>(328u + wordIdx), "block156", wordIdx, name.str(), value);
+    }
+}
+
+void RefreshMrProfileTable() {
+    if (g_ui.mrProfileTable == nullptr) {
+        return;
+    }
+    if (!IsMrProfileMode()) {
+        ListView_DeleteAllItems(g_ui.mrProfileTable);
+        return;
+    }
+    EnsureMrProfileColumns();
+    ListView_DeleteAllItems(g_ui.mrProfileTable);
+    const auto& words = g_state.mrProfile.words;
+    for (std::size_t i = 0; i < words.size(); ++i) {
+        LVITEMA item = {};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = static_cast<int>(i);
+        item.iSubItem = 0;
+        std::string idx = std::to_string(i);
+        item.pszText = idx.data();
+        item.lParam = static_cast<LPARAM>(i);
+        const int row = ListView_InsertItem(g_ui.mrProfileTable, &item);
+        if (row >= 0) {
+            std::string dec = std::to_string(words[i]);
+            std::string hex = FormatU32Hex(words[i]);
+            std::string meaning = MrProfileWordMeaning(i, words[i]);
+            ListView_SetItemText(g_ui.mrProfileTable, row, 1, dec.data());
+            ListView_SetItemText(g_ui.mrProfileTable, row, 2, hex.data());
+            ListView_SetItemText(g_ui.mrProfileTable, row, 3, meaning.data());
+        }
+    }
+    SelectListRow(g_ui.mrProfileTable, g_state.selectedMrProfileWord);
+}
+
+void RefreshMrTimesTable() {
+    if (g_ui.mrTimesTable == nullptr) {
+        return;
+    }
+    if (!IsMrTimesMode()) {
+        ListView_DeleteAllItems(g_ui.mrTimesTable);
+        return;
+    }
+    EnsureMrTimesColumns();
+    ListView_DeleteAllItems(g_ui.mrTimesTable);
+    const auto& recs = g_state.mrTimes.records;
+    for (std::size_t i = 0; i < recs.size(); ++i) {
+        LVITEMA item = {};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = static_cast<int>(i);
+        item.iSubItem = 0;
+        std::string idx = std::to_string(i);
+        item.pszText = idx.data();
+        item.lParam = static_cast<LPARAM>(i);
+        const int row = ListView_InsertItem(g_ui.mrTimesTable, &item);
+        if (row >= 0) {
+            std::string name = ReadAsciiTag(recs[i].nameRaw);
+            std::string a = std::to_string(recs[i].valueA);
+            std::string b = std::to_string(recs[i].valueB);
+            std::string bt = FormatCentiseconds(recs[i].valueB);
+            ListView_SetItemText(g_ui.mrTimesTable, row, 1, name.data());
+            ListView_SetItemText(g_ui.mrTimesTable, row, 2, a.data());
+            ListView_SetItemText(g_ui.mrTimesTable, row, 3, b.data());
+            ListView_SetItemText(g_ui.mrTimesTable, row, 4, bt.data());
+        }
+    }
+    SelectListRow(g_ui.mrTimesTable, g_state.selectedMrTimesRecord);
+}
+
+void RefreshMrSeg0Table() {
+    if (g_ui.mrSeg0Table == nullptr) {
+        return;
+    }
+    if (!IsMrSeg0Mode()) {
+        ListView_DeleteAllItems(g_ui.mrSeg0Table);
+        return;
+    }
+    EnsureMrSeg0Columns();
+    ListView_DeleteAllItems(g_ui.mrSeg0Table);
+    const auto& pts = g_state.mrSeg0.points;
+    double total = 0.0;
+    for (std::size_t i = 0; i < pts.size(); ++i) {
+        LVITEMA item = {};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = static_cast<int>(i);
+        item.iSubItem = 0;
+        std::string idx = std::to_string(i);
+        item.pszText = idx.data();
+        item.lParam = static_cast<LPARAM>(i);
+        const int row = ListView_InsertItem(g_ui.mrSeg0Table, &item);
+        if (row >= 0) {
+            double dist = 0.0;
+            if (i > 0u) {
+                dist = Distance3(pts[i].x, pts[i].y, pts[i].z, pts[i - 1u].x, pts[i - 1u].y, pts[i - 1u].z);
+            }
+            total += dist;
+            std::string x = FormatFloat3(pts[i].x);
+            std::string y = FormatFloat3(pts[i].y);
+            std::string z = FormatFloat3(pts[i].z);
+            std::string d = FormatFloat3(static_cast<float>(dist));
+            std::string t = FormatFloat3(static_cast<float>(total));
+            ListView_SetItemText(g_ui.mrSeg0Table, row, 1, x.data());
+            ListView_SetItemText(g_ui.mrSeg0Table, row, 2, y.data());
+            ListView_SetItemText(g_ui.mrSeg0Table, row, 3, z.data());
+            ListView_SetItemText(g_ui.mrSeg0Table, row, 4, d.data());
+            ListView_SetItemText(g_ui.mrSeg0Table, row, 5, t.data());
+        }
+    }
+    SelectListRow(g_ui.mrSeg0Table, g_state.selectedMrSeg0Point);
+}
+
 bool ApplyMaskListChangeToProfileField(bool freerideList) {
     if (!IsProfileMode()) {
         return false;
@@ -1706,7 +2938,7 @@ void RefreshWarning() {
         SetText(g_ui.warning, "");
         return;
     }
-    if (IsProfileMode()) {
+    if (!IsMissionMode()) {
         SetText(g_ui.warning, "");
         return;
     }
@@ -1725,6 +2957,29 @@ void RefreshWarning() {
     SetText(g_ui.warning, "");
 }
 
+void SetProfileMaskTablesVisible(bool visible) {
+    const int cmd = visible ? SW_SHOW : SW_HIDE;
+    ShowWindow(g_ui.profileFreerideBitsLabel, cmd);
+    ShowWindow(g_ui.profileRaceBitsLabel, cmd);
+    ShowWindow(g_ui.profileFreerideBits, cmd);
+    ShowWindow(g_ui.profileRaceBits, cmd);
+}
+
+void SetProfileWordsTableVisible(bool visible) {
+    const int cmd = visible ? SW_SHOW : SW_HIDE;
+    ShowWindow(g_ui.profileWordsTableLabel, cmd);
+    ShowWindow(g_ui.profileWordsTable, cmd);
+}
+
+void SetMrTablesVisible(bool profileVisible, bool timesVisible, bool seg0Visible) {
+    ShowWindow(g_ui.mrProfileTableLabel, profileVisible ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_ui.mrProfileTable, profileVisible ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_ui.mrTimesTableLabel, timesVisible ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_ui.mrTimesTable, timesVisible ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_ui.mrSeg0TableLabel, seg0Visible ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_ui.mrSeg0Table, seg0Visible ? SW_SHOW : SW_HIDE);
+}
+
 void FillMain() {
     g_suppressMainEditEvents = true;
     if (!g_state.loaded) {
@@ -1735,11 +2990,14 @@ void FillMain() {
         SetText(g_ui.slot, "");
         SetText(g_ui.mcode, "");
         SetText(g_ui.mname, "");
-        ShowWindow(g_ui.profileFreerideBitsLabel, SW_HIDE);
-        ShowWindow(g_ui.profileRaceBitsLabel, SW_HIDE);
-        ShowWindow(g_ui.profileFreerideBits, SW_HIDE);
-        ShowWindow(g_ui.profileRaceBits, SW_HIDE);
+        SetProfileMaskTablesVisible(false);
+        SetProfileWordsTableVisible(false);
+        SetMrTablesVisible(false, false, false);
         RefreshProfileMaskListsFromFields();
+        RefreshProfileWordsTable();
+        RefreshMrProfileTable();
+        RefreshMrTimesTable();
+        RefreshMrSeg0Table();
         g_suppressMainEditEvents = false;
         return;
     }
@@ -1762,11 +3020,147 @@ void FillMain() {
             SetText(g_ui.mcode, "");
             SetText(g_ui.mname, "");
         }
-        ShowWindow(g_ui.profileFreerideBitsLabel, SW_SHOW);
-        ShowWindow(g_ui.profileRaceBitsLabel, SW_SHOW);
-        ShowWindow(g_ui.profileFreerideBits, SW_SHOW);
-        ShowWindow(g_ui.profileRaceBits, SW_SHOW);
+        SetProfileMaskTablesVisible(true);
+        SetProfileWordsTableVisible(true);
+        SetMrTablesVisible(false, false, false);
         RefreshProfileMaskListsFromFields();
+        RefreshProfileWordsTable();
+        RefreshMrProfileTable();
+        RefreshMrTimesTable();
+        RefreshMrSeg0Table();
+        g_suppressMainEditEvents = false;
+        return;
+    }
+
+    if (IsMrProfileMode()) {
+        SetMainLabelsMrProfileMode();
+        const auto& w = g_state.mrProfile.words;
+        if (w.empty()) {
+            SetText(g_ui.hp, "0");
+            SetText(g_ui.date, "0");
+            SetText(g_ui.time, "0x00000000");
+            SetText(g_ui.slot, "0");
+            SetText(g_ui.mcode, std::to_string(g_state.mrProfile.rawSize));
+            SetText(g_ui.mname, "no words");
+        } else {
+            g_state.selectedMrProfileWord =
+                std::clamp(g_state.selectedMrProfileWord, 0, static_cast<int>(w.size()) - 1);
+            const std::uint32_t value = w[static_cast<std::size_t>(g_state.selectedMrProfileWord)];
+            SetText(g_ui.hp, std::to_string(g_state.selectedMrProfileWord));
+            SetText(g_ui.date, std::to_string(value));
+            SetText(g_ui.time, FormatU32Hex(value));
+            SetText(g_ui.slot, std::to_string(w.size()));
+            SetText(g_ui.mcode, std::to_string(g_state.mrProfile.rawSize));
+            SetText(g_ui.mname, "0=locked, 1=in progress, >=2 completed/flagged");
+        }
+        SetProfileMaskTablesVisible(false);
+        SetProfileWordsTableVisible(false);
+        SetMrTablesVisible(true, false, false);
+        RefreshProfileMaskListsFromFields();
+        RefreshProfileWordsTable();
+        RefreshMrProfileTable();
+        RefreshMrTimesTable();
+        RefreshMrSeg0Table();
+        g_suppressMainEditEvents = false;
+        return;
+    }
+
+    if (IsMrTimesMode()) {
+        SetMainLabelsMrTimesMode();
+        if (g_state.mrTimes.records.empty()) {
+            SetText(g_ui.hp, "0");
+            SetText(g_ui.date, "");
+            SetText(g_ui.time, "0");
+            SetText(g_ui.slot, "0");
+            SetText(g_ui.mcode, std::to_string(g_state.mrTimes.count));
+            SetText(g_ui.mname, "records=0");
+            SetProfileMaskTablesVisible(false);
+            SetProfileWordsTableVisible(false);
+            SetMrTablesVisible(false, true, false);
+            RefreshProfileMaskListsFromFields();
+            RefreshProfileWordsTable();
+            RefreshMrProfileTable();
+            RefreshMrTimesTable();
+            RefreshMrSeg0Table();
+            g_suppressMainEditEvents = false;
+            return;
+        }
+        int recIdx = 0;
+        if (!g_state.mrTimes.records.empty()) {
+            recIdx = std::clamp(g_state.selectedMrTimesRecord, 0, static_cast<int>(g_state.mrTimes.records.size()) - 1);
+        }
+        const auto& rec = g_state.mrTimes.records[static_cast<std::size_t>(recIdx)];
+        SetText(g_ui.hp, std::to_string(recIdx));
+        SetText(g_ui.date, ReadAsciiTag(rec.nameRaw));
+        SetText(g_ui.time, std::to_string(rec.valueA));
+        SetText(g_ui.slot, std::to_string(rec.valueB));
+        SetText(g_ui.mcode, std::to_string(g_state.mrTimes.count));
+        std::ostringstream summary;
+        summary << "records=" << g_state.mrTimes.records.size() << " | selected time=" << FormatCentiseconds(rec.valueB);
+        SetText(g_ui.mname, summary.str());
+        SetProfileMaskTablesVisible(false);
+        SetProfileWordsTableVisible(false);
+        SetMrTablesVisible(false, true, false);
+        RefreshProfileMaskListsFromFields();
+        RefreshProfileWordsTable();
+        RefreshMrProfileTable();
+        RefreshMrTimesTable();
+        RefreshMrSeg0Table();
+        g_suppressMainEditEvents = false;
+        return;
+    }
+
+    if (IsMrSeg0Mode()) {
+        SetMainLabelsMrSeg0Mode();
+        if (g_state.mrSeg0.points.empty()) {
+            SetText(g_ui.hp, "0");
+            SetText(g_ui.date, "0.000");
+            SetText(g_ui.time, "0.000");
+            SetText(g_ui.slot, "0.000");
+            std::ostringstream hdr;
+            hdr << g_state.mrSeg0.headerA << ", " << g_state.mrSeg0.headerB << ", " << g_state.mrSeg0.headerC;
+            SetText(g_ui.mcode, hdr.str());
+            SetText(g_ui.mname, "0");
+            SetProfileMaskTablesVisible(false);
+            SetProfileWordsTableVisible(false);
+            SetMrTablesVisible(false, false, true);
+            RefreshProfileMaskListsFromFields();
+            RefreshProfileWordsTable();
+            RefreshMrProfileTable();
+            RefreshMrTimesTable();
+            RefreshMrSeg0Table();
+            g_suppressMainEditEvents = false;
+            return;
+        }
+        int pIdx = 0;
+        if (!g_state.mrSeg0.points.empty()) {
+            pIdx = std::clamp(g_state.selectedMrSeg0Point, 0, static_cast<int>(g_state.mrSeg0.points.size()) - 1);
+        }
+        const auto& p = g_state.mrSeg0.points[static_cast<std::size_t>(pIdx)];
+        SetText(g_ui.hp, std::to_string(pIdx));
+        SetText(g_ui.date, FormatFloat3(p.x));
+        SetText(g_ui.time, FormatFloat3(p.y));
+        SetText(g_ui.slot, FormatFloat3(p.z));
+        std::ostringstream hdr;
+        hdr << g_state.mrSeg0.headerA << ", " << g_state.mrSeg0.headerB << ", " << g_state.mrSeg0.headerC;
+        SetText(g_ui.mcode, hdr.str());
+        double totalDist = 0.0;
+        for (std::size_t i = 1; i < g_state.mrSeg0.points.size(); ++i) {
+            totalDist += Distance3(g_state.mrSeg0.points[i].x, g_state.mrSeg0.points[i].y, g_state.mrSeg0.points[i].z,
+                                   g_state.mrSeg0.points[i - 1u].x, g_state.mrSeg0.points[i - 1u].y,
+                                   g_state.mrSeg0.points[i - 1u].z);
+        }
+        std::ostringstream summary;
+        summary << "points=" << g_state.mrSeg0.points.size() << " | path=" << FormatFloat3(static_cast<float>(totalDist));
+        SetText(g_ui.mname, summary.str());
+        SetProfileMaskTablesVisible(false);
+        SetProfileWordsTableVisible(false);
+        SetMrTablesVisible(false, false, true);
+        RefreshProfileMaskListsFromFields();
+        RefreshProfileWordsTable();
+        RefreshMrProfileTable();
+        RefreshMrTimesTable();
+        RefreshMrSeg0Table();
         g_suppressMainEditEvents = false;
         return;
     }
@@ -1785,12 +3179,16 @@ void FillMain() {
     SetText(g_ui.time, FormatTime(meta.packedTime));
     SetText(g_ui.slot, std::to_string(meta.slot));
     SetText(g_ui.mcode, std::to_string(meta.missionCode));
-    SetText(g_ui.mname, mafia_save::ReadMissionName(g_state.save, &err));
-    ShowWindow(g_ui.profileFreerideBitsLabel, SW_HIDE);
-    ShowWindow(g_ui.profileRaceBitsLabel, SW_HIDE);
-    ShowWindow(g_ui.profileFreerideBits, SW_HIDE);
-    ShowWindow(g_ui.profileRaceBits, SW_HIDE);
+    const std::string missionRaw = mafia_save::ReadMissionName(g_state.save, &err);
+    SetText(g_ui.mname, DecodeBytesCp1252ToUtf8(reinterpret_cast<const std::uint8_t*>(missionRaw.data()), missionRaw.size()));
+    SetProfileMaskTablesVisible(false);
+    SetProfileWordsTableVisible(false);
+    SetMrTablesVisible(false, false, false);
     RefreshProfileMaskListsFromFields();
+    RefreshProfileWordsTable();
+    RefreshMrProfileTable();
+    RefreshMrTimesTable();
+    RefreshMrSeg0Table();
     g_suppressMainEditEvents = false;
 }
 
@@ -1822,7 +3220,7 @@ void FillProgramVarTable(const std::vector<std::uint8_t>& payload, const Program
         const float v = ReadF32LE(payload, prog.varsOff + (static_cast<std::size_t>(i) * 4u));
         std::ostringstream row;
         row << i << " | " << FormatFloat3(v);
-        const LRESULT pos = SendMessageA(g_ui.progVarsTable, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(row.str().c_str()));
+        const LRESULT pos = ListBoxAddStringUtf8(g_ui.progVarsTable, row.str());
         if (pos != LB_ERR && pos != LB_ERRSPACE) {
             SendMessageA(g_ui.progVarsTable, LB_SETITEMDATA, static_cast<WPARAM>(pos), static_cast<LPARAM>(i));
         }
@@ -1983,6 +3381,8 @@ void FillActorEditor() {
                                      bool dir,
                                      bool anim,
                                      bool humanState,
+                                     bool humanHealth,
+                                     bool humanProps,
                                      bool humanInventory,
                                      bool quat,
                                      bool carState,
@@ -2007,6 +3407,22 @@ void FillActorEditor() {
         SetFieldVisible(g_ui.humanShootXLabel, g_ui.humanShootX, humanState);
         SetFieldVisible(g_ui.humanShootYLabel, g_ui.humanShootY, humanState);
         SetFieldVisible(g_ui.humanShootZLabel, g_ui.humanShootZ, humanState);
+        SetFieldVisible(g_ui.humanHpCurrentLabel, g_ui.humanHpCurrent, humanHealth);
+        SetFieldVisible(g_ui.humanHpMaxLabel, g_ui.humanHpMax, humanHealth);
+        SetFieldVisible(g_ui.humanHpPercentLabel, g_ui.humanHpPercent, humanHealth);
+        SetFieldVisible(g_ui.humanPropIndexLabel, g_ui.humanPropIndex, humanProps);
+        SetFieldVisible(g_ui.humanPropNameLabel, g_ui.humanPropName, humanProps);
+        SetFieldVisible(g_ui.humanPropCurLabel, g_ui.humanPropCur, humanProps);
+        SetFieldVisible(g_ui.humanPropInitLabel, g_ui.humanPropInit, humanProps);
+        if (g_ui.humanPropsLabel != nullptr) {
+            ShowWindow(g_ui.humanPropsLabel, humanProps ? SW_SHOW : SW_HIDE);
+        }
+        if (g_ui.humanPropsTable != nullptr) {
+            ShowWindow(g_ui.humanPropsTable, humanProps ? SW_SHOW : SW_HIDE);
+        }
+        if (g_ui.humanPropApply != nullptr) {
+            ShowWindow(g_ui.humanPropApply, humanProps ? SW_SHOW : SW_HIDE);
+        }
         SetFieldVisible(g_ui.rotwLabel, g_ui.rotw, quat);
         SetFieldVisible(g_ui.rotxLabel, g_ui.rotx, quat);
         SetFieldVisible(g_ui.rotyLabel, g_ui.roty, quat);
@@ -2029,7 +3445,7 @@ void FillActorEditor() {
     setCoreVisibility();
     const auto segIdxOpt = CurrentSelectedActorSegIdx();
     if (!g_state.loaded || !segIdxOpt.has_value()) {
-        setOptionalVisibility(false, false, false, false, false, false, false, false, false, false, false);
+        setOptionalVisibility(false, false, false, false, false, false, false, false, false, false, false, false, false);
         SetText(g_ui.aname, "");
         SetText(g_ui.amodel, "");
         SetText(g_ui.atype, "");
@@ -2053,6 +3469,16 @@ void FillActorEditor() {
         SetText(g_ui.humanShootX, "");
         SetText(g_ui.humanShootY, "");
         SetText(g_ui.humanShootZ, "");
+        SetText(g_ui.humanHpCurrent, "");
+        SetText(g_ui.humanHpMax, "");
+        SetText(g_ui.humanHpPercent, "");
+        SetText(g_ui.humanPropIndex, "");
+        SetText(g_ui.humanPropName, "");
+        SetText(g_ui.humanPropCur, "");
+        SetText(g_ui.humanPropInit, "");
+        if (g_ui.humanPropsTable != nullptr) {
+            ListView_DeleteAllItems(g_ui.humanPropsTable);
+        }
         SetText(g_ui.rotw, "");
         SetText(g_ui.rotx, "");
         SetText(g_ui.roty, "");
@@ -2088,6 +3514,15 @@ void FillActorEditor() {
         EnableWindow(g_ui.humanShootX, FALSE);
         EnableWindow(g_ui.humanShootY, FALSE);
         EnableWindow(g_ui.humanShootZ, FALSE);
+        EnableWindow(g_ui.humanHpCurrent, FALSE);
+        EnableWindow(g_ui.humanHpMax, FALSE);
+        EnableWindow(g_ui.humanHpPercent, FALSE);
+        EnableWindow(g_ui.humanPropIndex, FALSE);
+        EnableWindow(g_ui.humanPropName, FALSE);
+        EnableWindow(g_ui.humanPropCur, FALSE);
+        EnableWindow(g_ui.humanPropInit, FALSE);
+        EnableWindow(g_ui.humanPropApply, FALSE);
+        EnableWindow(g_ui.humanPropsTable, FALSE);
         EnableWindow(g_ui.rotw, FALSE);
         EnableWindow(g_ui.rotx, FALSE);
         EnableWindow(g_ui.roty, FALSE);
@@ -2121,7 +3556,7 @@ void FillActorEditor() {
 
     const CoordLayout layout = DetectCoordLayout(segIdx);
     if (!IsActorPairAt(segIdx)) {
-        setOptionalVisibility(false, false, false, false, false, false, false, false, false, false, false);
+        setOptionalVisibility(false, false, false, false, false, false, false, false, false, false, false, false, false);
         SetText(g_ui.pstate, "");
         SetText(g_ui.pid, "");
         SetText(g_ui.pactive, "");
@@ -2140,6 +3575,16 @@ void FillActorEditor() {
         SetText(g_ui.humanShootX, "");
         SetText(g_ui.humanShootY, "");
         SetText(g_ui.humanShootZ, "");
+        SetText(g_ui.humanHpCurrent, "");
+        SetText(g_ui.humanHpMax, "");
+        SetText(g_ui.humanHpPercent, "");
+        SetText(g_ui.humanPropIndex, "");
+        SetText(g_ui.humanPropName, "");
+        SetText(g_ui.humanPropCur, "");
+        SetText(g_ui.humanPropInit, "");
+        if (g_ui.humanPropsTable != nullptr) {
+            ListView_DeleteAllItems(g_ui.humanPropsTable);
+        }
         SetText(g_ui.rotw, "");
         SetText(g_ui.rotx, "");
         SetText(g_ui.roty, "");
@@ -2175,6 +3620,15 @@ void FillActorEditor() {
         EnableWindow(g_ui.humanShootX, FALSE);
         EnableWindow(g_ui.humanShootY, FALSE);
         EnableWindow(g_ui.humanShootZ, FALSE);
+        EnableWindow(g_ui.humanHpCurrent, FALSE);
+        EnableWindow(g_ui.humanHpMax, FALSE);
+        EnableWindow(g_ui.humanHpPercent, FALSE);
+        EnableWindow(g_ui.humanPropIndex, FALSE);
+        EnableWindow(g_ui.humanPropName, FALSE);
+        EnableWindow(g_ui.humanPropCur, FALSE);
+        EnableWindow(g_ui.humanPropInit, FALSE);
+        EnableWindow(g_ui.humanPropApply, FALSE);
+        EnableWindow(g_ui.humanPropsTable, FALSE);
         EnableWindow(g_ui.rotw, FALSE);
         EnableWindow(g_ui.rotx, FALSE);
         EnableWindow(g_ui.roty, FALSE);
@@ -2201,6 +3655,8 @@ void FillActorEditor() {
                           layout.dirSupported,
                           layout.animSupported,
                           layout.humanStateSupported,
+                          layout.humanHealthSupported,
+                          layout.humanPropsSupported,
                           layout.humanInventorySupported,
                           layout.quatSupported,
                           layout.carStateSupported,
@@ -2299,6 +3755,52 @@ void FillActorEditor() {
         EnableWindow(g_ui.humanShootX, FALSE);
         EnableWindow(g_ui.humanShootY, FALSE);
         EnableWindow(g_ui.humanShootZ, FALSE);
+    }
+
+    if (layout.humanHealthSupported) {
+        const float hpCurrent = ReadF32LE(p, layout.humanHpCurrentOff);
+        const float hpMax = ReadF32LE(p, layout.humanHpMaxOff);
+        SetText(g_ui.humanHpCurrent, FormatFloat3(hpCurrent));
+        SetText(g_ui.humanHpMax, FormatFloat3(hpMax));
+        if (std::isfinite(hpCurrent) && std::isfinite(hpMax) && hpMax > 0.0f) {
+            SetText(g_ui.humanHpPercent, FormatFloat3((hpCurrent / hpMax) * 100.0f));
+        } else {
+            SetText(g_ui.humanHpPercent, "-");
+        }
+        EnableWindow(g_ui.humanHpCurrent, TRUE);
+        EnableWindow(g_ui.humanHpMax, TRUE);
+        EnableWindow(g_ui.humanHpPercent, TRUE);
+    } else {
+        SetText(g_ui.humanHpCurrent, "");
+        SetText(g_ui.humanHpMax, "");
+        SetText(g_ui.humanHpPercent, "");
+        EnableWindow(g_ui.humanHpCurrent, FALSE);
+        EnableWindow(g_ui.humanHpMax, FALSE);
+        EnableWindow(g_ui.humanHpPercent, FALSE);
+    }
+
+    if (layout.humanPropsSupported) {
+        FillHumanPropsTable(p, layout);
+        EnableWindow(g_ui.humanPropIndex, TRUE);
+        EnableWindow(g_ui.humanPropName, FALSE);
+        EnableWindow(g_ui.humanPropCur, TRUE);
+        EnableWindow(g_ui.humanPropInit, TRUE);
+        EnableWindow(g_ui.humanPropApply, TRUE);
+        EnableWindow(g_ui.humanPropsTable, TRUE);
+    } else {
+        if (g_ui.humanPropsTable != nullptr) {
+            ListView_DeleteAllItems(g_ui.humanPropsTable);
+        }
+        SetText(g_ui.humanPropIndex, "");
+        SetText(g_ui.humanPropName, "");
+        SetText(g_ui.humanPropCur, "");
+        SetText(g_ui.humanPropInit, "");
+        EnableWindow(g_ui.humanPropIndex, FALSE);
+        EnableWindow(g_ui.humanPropName, FALSE);
+        EnableWindow(g_ui.humanPropCur, FALSE);
+        EnableWindow(g_ui.humanPropInit, FALSE);
+        EnableWindow(g_ui.humanPropApply, FALSE);
+        EnableWindow(g_ui.humanPropsTable, FALSE);
     }
 
     if (layout.humanInventorySupported) {
@@ -2414,13 +3916,26 @@ void FillActorList() {
 
     for (std::size_t i = 0; i < g_state.filteredActorHeaders.size(); ++i) {
         const std::string row = BuildActorRow(g_state.filteredActorHeaders[i]);
-        SendMessageA(g_ui.actors, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(row.c_str()));
+        ListBoxAddStringUtf8(g_ui.actors, row);
     }
 
     if (g_state.selectedActor >= 0 && g_state.selectedActor < static_cast<int>(g_state.filteredActorHeaders.size())) {
         SendMessageA(g_ui.actors, LB_SETCURSEL, static_cast<WPARAM>(g_state.selectedActor), 0);
     }
     FillActorEditor();
+    if (g_ui.actorRawActors != nullptr) {
+        SendMessageA(g_ui.actorRawActors, LB_RESETCONTENT, 0, 0);
+        for (std::size_t i = 0; i < g_state.filteredActorHeaders.size(); ++i) {
+            const std::string row = BuildActorRow(g_state.filteredActorHeaders[i]);
+            ListBoxAddStringUtf8(g_ui.actorRawActors, row);
+        }
+        if (g_state.selectedActor >= 0 && g_state.selectedActor < static_cast<int>(g_state.filteredActorHeaders.size())) {
+            SendMessageA(g_ui.actorRawActors, LB_SETCURSEL, static_cast<WPARAM>(g_state.selectedActor), 0);
+        }
+        if (g_ui.pageActorRaw != nullptr && IsWindowVisible(g_ui.pageActorRaw)) {
+            FillActorRawTable();
+        }
+    }
 }
 
 std::string BuildCarRow(std::size_t segIdx) {
@@ -2547,7 +4062,7 @@ void FillCarsList() {
 
     for (std::size_t i = 0; i < g_state.carHeaders.size(); ++i) {
         const std::string row = BuildCarRow(g_state.carHeaders[i]);
-        SendMessageA(g_ui.carsList, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(row.c_str()));
+        ListBoxAddStringUtf8(g_ui.carsList, row);
     }
 
     if (g_state.selectedCar >= 0 && g_state.selectedCar < static_cast<int>(g_state.carHeaders.size())) {
@@ -2826,7 +4341,8 @@ bool IsGarageDisplayNameToken(const std::string& s) {
         return false;
     }
     for (char ch : s) {
-        const bool ok = std::isalnum(static_cast<unsigned char>(ch)) || ch == ' ' || ch == '-' || ch == '.' || ch == '\'';
+        const unsigned char b = static_cast<unsigned char>(ch);
+        const bool ok = (b >= 128u) || std::isalnum(b) || ch == ' ' || ch == '-' || ch == '.' || ch == '\'';
         if (!ok) {
             return false;
         }
@@ -2838,7 +4354,7 @@ std::vector<std::string> ExtractAsciiRuns(const std::vector<std::uint8_t>& bytes
     std::vector<std::string> out;
     std::string cur;
     for (std::uint8_t b : bytes) {
-        if (b >= 32u && b <= 126u) {
+        if (IsPrintableAnsiByte(b)) {
             cur.push_back(static_cast<char>(b));
         } else {
             if (cur.size() >= minLen) {
@@ -2867,18 +4383,19 @@ std::string ReadAsciiZ(const std::vector<std::uint8_t>& data, std::size_t off, s
         return {};
     }
     const std::size_t end = std::min(data.size(), off + cap);
-    std::string out;
-    out.reserve(cap);
+    std::vector<std::uint8_t> raw;
+    raw.reserve(cap);
     for (std::size_t i = off; i < end; ++i) {
-        const unsigned char ch = data[i];
-        if (ch == 0u) {
+        const std::uint8_t b = data[i];
+        if (b == 0u) {
             break;
         }
-        if (ch < 32u || ch > 126u) {
+        if (!IsPrintableAnsiByte(b)) {
             break;
         }
-        out.push_back(static_cast<char>(ch));
+        raw.push_back(b);
     }
+    std::string out = DecodeBytesCp1252ToUtf8(raw.data(), raw.size());
     return Trim(out);
 }
 
@@ -3145,18 +4662,18 @@ std::string GarageRowSummary(std::uint32_t value) {
 
 void PopulateGarageCarCombo(HWND combo) {
     SendMessageA(combo, CB_RESETCONTENT, 0, 0);
-    const LRESULT nonePos = SendMessageA(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>("<keep raw index>"));
+    const LRESULT nonePos = ComboAddStringUtf8(combo, "<keep raw index>");
     if (nonePos != CB_ERR && nonePos != CB_ERRSPACE) {
         SendMessageA(combo, CB_SETITEMDATA, static_cast<WPARAM>(nonePos), static_cast<LPARAM>(-1));
     }
-    const LRESULT emptyPos = SendMessageA(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>("<empty (0)>"));
+    const LRESULT emptyPos = ComboAddStringUtf8(combo, "<empty (0)>");
     if (emptyPos != CB_ERR && emptyPos != CB_ERRSPACE) {
         SendMessageA(combo, CB_SETITEMDATA, static_cast<WPARAM>(emptyPos), static_cast<LPARAM>(0));
     }
     if (!g_garageCatalog.empty()) {
         for (const auto& e : g_garageCatalog) {
             const std::string text = GarageCatalogEntryText(e);
-            const LRESULT pos = SendMessageA(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text.c_str()));
+            const LRESULT pos = ComboAddStringUtf8(combo, text);
             if (pos != CB_ERR && pos != CB_ERRSPACE) {
                 SendMessageA(combo, CB_SETITEMDATA, static_cast<WPARAM>(pos), static_cast<LPARAM>(e.index + 1u));
             }
@@ -3166,7 +4683,7 @@ void PopulateGarageCarCombo(HWND combo) {
             std::ostringstream oss;
             oss << "[" << i << "] idx only";
             const std::string text = oss.str();
-            const LRESULT pos = SendMessageA(combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text.c_str()));
+            const LRESULT pos = ComboAddStringUtf8(combo, text);
             if (pos != CB_ERR && pos != CB_ERRSPACE) {
                 SendMessageA(combo, CB_SETITEMDATA, static_cast<WPARAM>(pos), static_cast<LPARAM>(i));
             }
@@ -3374,7 +4891,7 @@ void FillGarageList() {
 
     for (int i = 0; i < static_cast<int>(kGarageSlotCount); ++i) {
         const std::string row = BuildGarageRow(i);
-        SendMessageA(g_ui.garageList, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(row.c_str()));
+        ListBoxAddStringUtf8(g_ui.garageList, row);
     }
     if (g_state.selectedGarageSlot < 0 || g_state.selectedGarageSlot >= static_cast<int>(kGarageSlotCount)) {
         g_state.selectedGarageSlot = 0;
@@ -3458,14 +4975,54 @@ void RefreshInfo() {
         std::ostringstream oss;
         oss << "Profile .sav | core84/720/92/156";
         if (c.size() >= profile_sav::kCoreSize) {
-            const std::uint32_t freerideMode = profile_sav::ReadU32LE(c, 17u * 4u);
+            const std::uint32_t slotMode = profile_sav::ReadU32LE(c, 17u * 4u);
             const std::uint32_t freerideParam = profile_sav::ReadU32LE(c, 18u * 4u);
             const std::uint32_t raceMask = profile_sav::ReadU32LE(c, 20u * 4u);
             oss << " | profile_id=" << profile_sav::ReadU32LE(c, 2u * 4u);
-            oss << " | freeride_mode=" << freerideMode;
-            oss << " | freeride_param=" << freerideParam << " (" << FormatU32Hex(freerideParam) << ")";
+            oss << " | slot_mode=" << slotMode;
+            oss << " | extreme_flags=" << freerideParam << " (" << FormatU32Hex(freerideParam) << ")";
             oss << " | race_mask=" << raceMask << " (" << FormatU32Hex(raceMask) << ")";
+            oss << " | words=" << ((profile_sav::kCoreSize + profile_sav::kBlock720Size + profile_sav::kBlock92Size +
+                                     profile_sav::kBlock156Size) /
+                                    4u);
         }
+        SetText(g_ui.info, oss.str());
+        return;
+    }
+
+    if (IsMrProfileMode()) {
+        std::ostringstream oss;
+        oss << "mrXXX.sav | u32_count=" << g_state.mrProfile.words.size();
+        if (g_state.mrProfile.words.size() >= 2u) {
+            oss << " | hdr=(" << g_state.mrProfile.words[0] << "," << g_state.mrProfile.words[1] << ")";
+        }
+        SetText(g_ui.info, oss.str());
+        return;
+    }
+
+    if (IsMrTimesMode()) {
+        std::ostringstream oss;
+        oss << "mrtimes.sav | count=" << g_state.mrTimes.count << " | records=" << g_state.mrTimes.records.size();
+        if (!g_state.mrTimes.records.empty()) {
+            const auto idx =
+                static_cast<std::size_t>(std::clamp(g_state.selectedMrTimesRecord, 0, static_cast<int>(g_state.mrTimes.records.size()) - 1));
+            oss << " | selected=" << FormatCentiseconds(g_state.mrTimes.records[idx].valueB);
+        }
+        SetText(g_ui.info, oss.str());
+        return;
+    }
+
+    if (IsMrSeg0Mode()) {
+        double totalDist = 0.0;
+        for (std::size_t i = 1; i < g_state.mrSeg0.points.size(); ++i) {
+            totalDist += Distance3(g_state.mrSeg0.points[i].x, g_state.mrSeg0.points[i].y, g_state.mrSeg0.points[i].z,
+                                   g_state.mrSeg0.points[i - 1u].x, g_state.mrSeg0.points[i - 1u].y,
+                                   g_state.mrSeg0.points[i - 1u].z);
+        }
+        std::ostringstream oss;
+        oss << "mrseg0.sav | header=(" << g_state.mrSeg0.headerA << "," << g_state.mrSeg0.headerB << ","
+            << g_state.mrSeg0.headerC << ") | points=" << g_state.mrSeg0.points.size()
+            << " | path=" << FormatFloat3(static_cast<float>(totalDist));
         SetText(g_ui.info, oss.str());
         return;
     }
@@ -3477,7 +5034,9 @@ void RefreshInfo() {
         return;
     }
 
-    const std::string mission = mafia_save::ReadMissionName(g_state.save, &err);
+    const std::string missionRaw = mafia_save::ReadMissionName(g_state.save, &err);
+    const std::string mission =
+        DecodeBytesCp1252ToUtf8(reinterpret_cast<const std::uint8_t*>(missionRaw.data()), missionRaw.size());
     std::ostringstream oss;
     oss << "Mission=" << mission << " | slot=" << meta.slot << " | code=" << meta.missionCode
         << " | actors=" << g_state.actorHeaders.size() << " | visible=" << g_state.filteredActorHeaders.size();
@@ -3486,7 +5045,8 @@ void RefreshInfo() {
 
 void SetEnabledMain(bool enabled) {
     const HWND arr[] = {g_ui.hp, g_ui.date, g_ui.time, g_ui.slot, g_ui.mcode, g_ui.mname, g_ui.profileFreerideBits,
-                        g_ui.profileRaceBits};
+                        g_ui.profileRaceBits, g_ui.profileWordsTable, g_ui.mrProfileTable, g_ui.mrTimesTable,
+                        g_ui.mrSeg0Table};
     for (HWND h : arr) {
         EnableWindow(h, enabled ? TRUE : FALSE);
     }
@@ -3533,6 +5093,9 @@ void SetEnabledActors(bool enabled) {
                         g_ui.posy,        g_ui.posz,        g_ui.dirx,        g_ui.diry,
                         g_ui.dirz,        g_ui.animId,      g_ui.humanSeat,   g_ui.humanCrouch,
                         g_ui.humanAim,    g_ui.humanShootX, g_ui.humanShootY, g_ui.humanShootZ,
+                        g_ui.humanHpCurrent, g_ui.humanHpMax, g_ui.humanHpPercent,
+                        g_ui.humanPropIndex, g_ui.humanPropName, g_ui.humanPropCur, g_ui.humanPropInit,
+                        g_ui.humanPropApply, g_ui.humanPropsTable,
                         g_ui.rotw,        g_ui.rotx,        g_ui.roty,        g_ui.rotz,
                         g_ui.carFuel,     g_ui.carFlow,     g_ui.carEngNorm,  g_ui.carEngCalc,
                         g_ui.carSpeedLimit, g_ui.carLastGear, g_ui.carGear, g_ui.carGearboxFlag,
@@ -3552,6 +5115,15 @@ void SetEnabledActors(bool enabled) {
     }
 }
 
+void SetEnabledActorRaw(bool enabled) {
+    const HWND arr[] = {g_ui.actorRawActors,    g_ui.actorRawScope,     g_ui.actorRawReload,   g_ui.actorRawOffset,
+                        g_ui.actorRawByte,      g_ui.actorRawApplyByte, g_ui.actorRawU32,      g_ui.actorRawApplyU32,
+                        g_ui.actorRawF32,       g_ui.actorRawApplyF32,  g_ui.actorRawTable};
+    for (HWND h : arr) {
+        EnableWindow(h, enabled ? TRUE : FALSE);
+    }
+}
+
 void FillAll() {
     SetText(g_ui.filterName, g_state.filterName);
     SetText(g_ui.filterType, g_state.filterType.has_value() ? std::to_string(*g_state.filterType) : "");
@@ -3560,6 +5132,7 @@ void FillAll() {
     FillMain();
     FillMission();
     FillActorList();
+    FillActorRawActorList();
     FillCarsList();
     FillGarageList();
 
@@ -3568,11 +5141,12 @@ void FillAll() {
     SetEnabledMain(on);
     SetEnabledMission(on && missionMode);
     SetEnabledActors(on && missionMode);
+    SetEnabledActorRaw(on && missionMode);
     SetEnabledCars(on && missionMode);
     SetEnabledGarage(on && missionMode && HasGarageInfoData());
     EnableWindow(g_ui.saveBtn, on ? TRUE : FALSE);
     EnableWindow(g_ui.resetBtn, on ? TRUE : FALSE);
-    if (IsProfileMode()) {
+    if (IsMainOnlyMode()) {
         TabCtrl_SetCurSel(g_ui.tab, 0);
         ShowTab(0);
     }
@@ -3587,15 +5161,36 @@ bool LoadFile(HWND hwnd, const fs::path& path) {
 
     mafia_save::SaveData parsedMission;
     profile_sav::ProfileSaveData parsedProfile;
+    profile_sav::MrProfileSaveData parsedMrProfile;
+    profile_sav::MrTimesSaveData parsedMrTimes;
+    profile_sav::MrSeg0SaveData parsedMrSeg0;
     std::string missionErr;
     const bool missionOk = mafia_save::ParseSave(raw, &parsedMission, &missionErr);
     bool profileOk = false;
+    bool mrProfileOk = false;
+    bool mrTimesOk = false;
+    bool mrSeg0Ok = false;
     std::string profileErr;
+    std::string mrProfileErr;
+    std::string mrTimesErr;
+    std::string mrSeg0Err;
     if (!missionOk) {
         profileOk = profile_sav::ParseProfileSave(raw, &parsedProfile, &profileErr);
     }
     if (!missionOk && !profileOk) {
-        Error(hwnd, "Unsupported save format.\nmission parse: " + missionErr + "\nprofile .sav parse: " + profileErr);
+        mrProfileOk = profile_sav::ParseMrProfileSave(raw, &parsedMrProfile, &mrProfileErr);
+    }
+    if (!missionOk && !profileOk && !mrProfileOk) {
+        mrTimesOk = profile_sav::ParseMrTimesSave(raw, &parsedMrTimes, &mrTimesErr);
+    }
+    if (!missionOk && !profileOk && !mrProfileOk && !mrTimesOk) {
+        mrSeg0Ok = profile_sav::ParseMrSeg0Save(raw, &parsedMrSeg0, &mrSeg0Err);
+    }
+    if (!missionOk && !profileOk && !mrProfileOk && !mrTimesOk && !mrSeg0Ok) {
+        Error(hwnd,
+              "Unsupported save format.\nmission parse: " + missionErr + "\nprofile .sav parse: " + profileErr +
+                  "\nmrXXX.sav parse: " + mrProfileErr + "\nmrtimes.sav parse: " + mrTimesErr +
+                  "\nmrseg0.sav parse: " + mrSeg0Err);
         return false;
     }
 
@@ -3605,6 +5200,8 @@ bool LoadFile(HWND hwnd, const fs::path& path) {
     g_state.selectedActor = 0;
     g_state.selectedCar = 0;
     g_state.selectedGarageSlot = 0;
+    g_state.selectedMrTimesRecord = 0;
+    g_state.selectedMrSeg0Point = 0;
     g_state.filterName.clear();
     g_state.filterType.reset();
     g_state.actorsRightScroll = 0;
@@ -3615,13 +5212,49 @@ bool LoadFile(HWND hwnd, const fs::path& path) {
         g_state.kind = AppState::LoadedKind::kMissionSave;
         g_state.save = std::move(parsedMission);
         g_state.profile = {};
+        g_state.mrProfile = {};
+        g_state.mrTimes = {};
+        g_state.mrSeg0 = {};
         RebuildActorIndex();
         RebuildFilteredActors();
         RebuildCarIndex();
-    } else {
+    } else if (profileOk) {
         g_state.kind = AppState::LoadedKind::kProfileSav;
         g_state.profile = std::move(parsedProfile);
         g_state.save = {};
+        g_state.mrProfile = {};
+        g_state.mrTimes = {};
+        g_state.mrSeg0 = {};
+        g_state.actorHeaders.clear();
+        g_state.filteredActorHeaders.clear();
+        g_state.carHeaders.clear();
+    } else if (mrProfileOk) {
+        g_state.kind = AppState::LoadedKind::kMrProfileSav;
+        g_state.mrProfile = std::move(parsedMrProfile);
+        g_state.save = {};
+        g_state.profile = {};
+        g_state.mrTimes = {};
+        g_state.mrSeg0 = {};
+        g_state.actorHeaders.clear();
+        g_state.filteredActorHeaders.clear();
+        g_state.carHeaders.clear();
+    } else if (mrTimesOk) {
+        g_state.kind = AppState::LoadedKind::kMrTimesSav;
+        g_state.mrTimes = std::move(parsedMrTimes);
+        g_state.save = {};
+        g_state.profile = {};
+        g_state.mrProfile = {};
+        g_state.mrSeg0 = {};
+        g_state.actorHeaders.clear();
+        g_state.filteredActorHeaders.clear();
+        g_state.carHeaders.clear();
+    } else {
+        g_state.kind = AppState::LoadedKind::kMrSeg0Sav;
+        g_state.mrSeg0 = std::move(parsedMrSeg0);
+        g_state.save = {};
+        g_state.profile = {};
+        g_state.mrProfile = {};
+        g_state.mrTimes = {};
         g_state.actorHeaders.clear();
         g_state.filteredActorHeaders.clear();
         g_state.carHeaders.clear();
@@ -3629,7 +5262,17 @@ bool LoadFile(HWND hwnd, const fs::path& path) {
 
     FillAll();
     LayoutWindow(hwnd);
-    SetStatus((missionOk ? "Loaded mission save: " : "Loaded profile .sav: ") + path.string());
+    if (missionOk) {
+        SetStatus("Loaded mission save: " + path.string());
+    } else if (profileOk) {
+        SetStatus("Loaded profile .sav: " + path.string());
+    } else if (mrProfileOk) {
+        SetStatus("Loaded mrXXX.sav: " + path.string());
+    } else if (mrTimesOk) {
+        SetStatus("Loaded mrtimes.sav: " + path.string());
+    } else {
+        SetStatus("Loaded mrseg0.sav: " + path.string());
+    }
     return true;
 }
 
@@ -3973,6 +5616,26 @@ bool ApplyActorEdits(std::string* err) {
         WriteF32LE(&p, layout.humanShootXOff, shootX);
         WriteF32LE(&p, layout.humanShootYOff, shootY);
         WriteF32LE(&p, layout.humanShootZOff, shootZ);
+    }
+
+    if (IsActorPairAt(segIdx) && layout.humanHealthSupported) {
+        float hpCurrent = 0.0f;
+        float hpMax = 0.0f;
+        if (!ParseF32(GetText(g_ui.humanHpCurrent), &hpCurrent, err, "Health current(246)")) {
+            return false;
+        }
+        if (!ParseF32(GetText(g_ui.humanHpMax), &hpMax, err, "Health max(310)")) {
+            return false;
+        }
+        if (!(hpMax > 0.0f) || !std::isfinite(hpMax)) {
+            if (err != nullptr) {
+                *err = "Health max must be > 0";
+            }
+            return false;
+        }
+        auto& p = g_state.save.segments[segIdx + 1].plain;
+        WriteF32LE(&p, layout.humanHpCurrentOff, hpCurrent);
+        WriteF32LE(&p, layout.humanHpMaxOff, hpMax);
     }
 
     if (IsActorPairAt(segIdx) && layout.humanInventorySupported) {
@@ -4393,16 +6056,16 @@ bool BuildEditedProfile(profile_sav::ProfileSaveData* out, std::string* err) {
     if (!ParseU32Auto(Trim(GetText(g_ui.slot)), &profileId, err, "Profile ID")) {
         return false;
     }
-    if (!ParseU32Auto(Trim(GetText(g_ui.hp)), &core17, err, "Freeride mode (core[17])")) {
+    if (!ParseU32Auto(Trim(GetText(g_ui.hp)), &core17, err, "Slot/mode (core[17])")) {
         return false;
     }
-    if (!ParseU32Auto(Trim(GetText(g_ui.date)), &core18, err, "Extreme cars (core[18])")) {
+    if (!ParseU32Auto(Trim(GetText(g_ui.date)), &core18, err, "Extreme cars flags (core[18])")) {
         return false;
     }
     if (!ParseU32Auto(Trim(GetText(g_ui.time)), &core20, err, "Unlocked car groups (core[20])")) {
         return false;
     }
-    if (!ParseU32Auto(Trim(GetText(g_ui.mcode)), &core3, err, "Reserved (core[3])")) {
+    if (!ParseU32Auto(Trim(GetText(g_ui.mcode)), &core3, err, "Reserved (core[3], LS[11])")) {
         return false;
     }
 
@@ -4416,6 +6079,148 @@ bool BuildEditedProfile(profile_sav::ProfileSaveData* out, std::string* err) {
     if (!WriteAsciiTag(&edited.core84, 16, 32, tag, err)) {
         return false;
     }
+
+    *out = std::move(edited);
+    return true;
+}
+
+bool BuildEditedMrProfile(profile_sav::MrProfileSaveData* out, std::string* err) {
+    if (out == nullptr) {
+        return false;
+    }
+    if (!IsMrProfileMode()) {
+        if (err != nullptr) {
+            *err = "mrXXX.sav is not loaded";
+        }
+        return false;
+    }
+    profile_sav::MrProfileSaveData edited = g_state.mrProfile;
+    if (edited.words.size() != 34u) {
+        if (err != nullptr) {
+            *err = "mrXXX.sav has invalid word count";
+        }
+        return false;
+    }
+
+    std::uint32_t wordIdx = 0;
+    std::uint32_t wordValue = 0;
+    if (!ParseU32Auto(Trim(GetText(g_ui.hp)), &wordIdx, err, "Word index")) {
+        return false;
+    }
+    if (wordIdx >= edited.words.size()) {
+        if (err != nullptr) {
+            *err = "word index out of range";
+        }
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.date)), &wordValue, err, "Word value")) {
+        return false;
+    }
+    edited.words[wordIdx] = wordValue;
+    g_state.selectedMrProfileWord = static_cast<int>(wordIdx);
+
+    *out = std::move(edited);
+    return true;
+}
+
+bool BuildEditedMrTimes(profile_sav::MrTimesSaveData* out, std::string* err) {
+    if (out == nullptr) {
+        return false;
+    }
+    if (!IsMrTimesMode()) {
+        if (err != nullptr) {
+            *err = "mrtimes.sav is not loaded";
+        }
+        return false;
+    }
+    profile_sav::MrTimesSaveData edited = g_state.mrTimes;
+    if (edited.records.empty()) {
+        if (err != nullptr) {
+            *err = "mrtimes.sav has no records";
+        }
+        return false;
+    }
+
+    std::uint32_t recIdx = 0;
+    std::uint32_t valueA = 0;
+    std::uint32_t valueB = 0;
+    std::uint32_t count = 0;
+    if (!ParseU32Auto(Trim(GetText(g_ui.hp)), &recIdx, err, "Record index")) {
+        return false;
+    }
+    if (recIdx >= edited.records.size()) {
+        if (err != nullptr) {
+            *err = "record index out of range";
+        }
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.time)), &valueA, err, "Param A")) {
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.slot)), &valueB, err, "Best time (cs)")) {
+        return false;
+    }
+    if (!ParseU32Auto(Trim(GetText(g_ui.mcode)), &count, err, "Header count")) {
+        return false;
+    }
+    const std::string name = Trim(GetText(g_ui.date));
+    if (!WriteAsciiTag(&edited.records[recIdx].nameRaw, name, err)) {
+        return false;
+    }
+    edited.records[recIdx].valueA = valueA;
+    edited.records[recIdx].valueB = valueB;
+    edited.count = count;
+    g_state.selectedMrTimesRecord = static_cast<int>(recIdx);
+
+    *out = std::move(edited);
+    return true;
+}
+
+bool BuildEditedMrSeg0(profile_sav::MrSeg0SaveData* out, std::string* err) {
+    if (out == nullptr) {
+        return false;
+    }
+    if (!IsMrSeg0Mode()) {
+        if (err != nullptr) {
+            *err = "mrseg0.sav is not loaded";
+        }
+        return false;
+    }
+    profile_sav::MrSeg0SaveData edited = g_state.mrSeg0;
+    if (edited.points.empty()) {
+        if (err != nullptr) {
+            *err = "mrseg0.sav has no points";
+        }
+        return false;
+    }
+
+    std::uint32_t pointIdx = 0;
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    if (!ParseU32Auto(Trim(GetText(g_ui.hp)), &pointIdx, err, "Point index")) {
+        return false;
+    }
+    if (pointIdx >= edited.points.size()) {
+        if (err != nullptr) {
+            *err = "point index out of range";
+        }
+        return false;
+    }
+    if (!ParseF32(Trim(GetText(g_ui.date)), &x, err, "Pos X")) {
+        return false;
+    }
+    if (!ParseF32(Trim(GetText(g_ui.time)), &y, err, "Pos Y")) {
+        return false;
+    }
+    if (!ParseF32(Trim(GetText(g_ui.slot)), &z, err, "Pos Z")) {
+        return false;
+    }
+
+    edited.points[pointIdx].x = x;
+    edited.points[pointIdx].y = y;
+    edited.points[pointIdx].z = z;
+    g_state.selectedMrSeg0Point = static_cast<int>(pointIdx);
 
     *out = std::move(edited);
     return true;
@@ -4472,22 +6277,25 @@ bool CloneSelectedActor(std::string* err) {
     return true;
 }
 HWND MakeLabel(HWND parent, const char* text, int x, int y, int w, int h, int id = 0) {
-    return CreateWindowExA(0, "STATIC", text, WS_CHILD | WS_VISIBLE, x, y, w, h, parent,
+    const std::wstring wtext = Utf8ToWide(text != nullptr ? text : "");
+    return CreateWindowExW(0, L"STATIC", wtext.c_str(), WS_CHILD | WS_VISIBLE, x, y, w, h, parent,
                            reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), nullptr, nullptr);
 }
 
 HWND MakeEdit(HWND parent, const char* text, int x, int y, int w, int h, int id, DWORD extraStyle = 0) {
-    return CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", text, WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | extraStyle,
+    const std::wstring wtext = Utf8ToWide(text != nullptr ? text : "");
+    return CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", wtext.c_str(), WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | extraStyle,
                            x, y, w, h, parent, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), nullptr, nullptr);
 }
 
 HWND MakeCombo(HWND parent, int x, int y, int w, int h, int id, DWORD extraStyle = 0) {
-    return CreateWindowExA(0, "COMBOBOX", "", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | extraStyle,
+    return CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | extraStyle,
                            x, y, w, h, parent, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), nullptr, nullptr);
 }
 
 HWND MakeButton(HWND parent, const char* text, int x, int y, int w, int h, int id) {
-    return CreateWindowExA(0, "BUTTON", text, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, x, y, w, h, parent,
+    const std::wstring wtext = Utf8ToWide(text != nullptr ? text : "");
+    return CreateWindowExW(0, L"BUTTON", wtext.c_str(), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, x, y, w, h, parent,
                            reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), nullptr, nullptr);
 }
 
@@ -4525,6 +6333,7 @@ void SubclassPageForward(HWND page) {
 void ShowTab(int index) {
     ShowWindow(g_ui.pageMain, index == 0 ? SW_SHOW : SW_HIDE);
     ShowWindow(g_ui.pageActors, index == 1 ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_ui.pageActorRaw, SW_HIDE);
     ShowWindow(g_ui.pageCars, index == 2 ? SW_SHOW : SW_HIDE);
     ShowWindow(g_ui.pageGarage, index == 3 ? SW_SHOW : SW_HIDE);
     ShowWindow(g_ui.pageMission, index == 4 ? SW_SHOW : SW_HIDE);
@@ -4604,25 +6413,83 @@ void LayoutMainPage() {
     const int rightW = std::max(220, w - rightX - margin);
     const int twoColGap = 12;
     const int colW = std::max(120, (rightW - twoColGap) / 2);
+    const int tableY = y + 4;
+    const int tableH = std::max(120, h - tableY - margin);
 
     if (IsProfileMode()) {
-        y += 4;
-        MoveWindow(g_ui.profileFreerideBitsLabel, rightX, y + 2, colW, 20, TRUE);
-        MoveWindow(g_ui.profileRaceBitsLabel, rightX + colW + twoColGap, y + 2, colW, 20, TRUE);
-        y += 22;
-
-        const int listH = std::max(120, h - y - margin);
-        MoveWindow(g_ui.profileFreerideBits, rightX, y, colW, listH, TRUE);
-        MoveWindow(g_ui.profileRaceBits, rightX + colW + twoColGap, y, colW, listH, TRUE);
+        MoveWindow(g_ui.profileFreerideBitsLabel, rightX, tableY + 2, colW, 20, TRUE);
+        MoveWindow(g_ui.profileRaceBitsLabel, rightX + colW + twoColGap, tableY + 2, colW, 20, TRUE);
+        const int listY = tableY + 22;
+        const int tableLabelH = 20;
+        const int gapY = 8;
+        const int minTableH = 140;
+        const int listH = std::max(120, h - listY - margin - tableLabelH - gapY - minTableH);
+        const int wordsY = listY + listH + gapY;
+        const int wordsListY = wordsY + tableLabelH;
+        const int wordsH = std::max(minTableH, h - wordsListY - margin);
+        MoveWindow(g_ui.profileFreerideBits, rightX, listY, colW, listH, TRUE);
+        MoveWindow(g_ui.profileRaceBits, rightX + colW + twoColGap, listY, colW, listH, TRUE);
+        MoveWindow(g_ui.profileWordsTableLabel, rightX, wordsY, rightW, tableLabelH, TRUE);
+        MoveWindow(g_ui.profileWordsTable, rightX, wordsListY, rightW, wordsH, TRUE);
         ListView_SetColumnWidth(g_ui.profileFreerideBits, 0, 110);
         ListView_SetColumnWidth(g_ui.profileFreerideBits, 1, std::max(120, colW - 122));
         ListView_SetColumnWidth(g_ui.profileRaceBits, 0, 110);
         ListView_SetColumnWidth(g_ui.profileRaceBits, 1, std::max(120, colW - 122));
+        ListView_SetColumnWidth(g_ui.profileWordsTable, 0, 72);
+        ListView_SetColumnWidth(g_ui.profileWordsTable, 1, 80);
+        ListView_SetColumnWidth(g_ui.profileWordsTable, 2, 66);
+        ListView_SetColumnWidth(g_ui.profileWordsTable, 3, std::max(160, rightW - 520));
+        ListView_SetColumnWidth(g_ui.profileWordsTable, 4, 120);
+        ListView_SetColumnWidth(g_ui.profileWordsTable, 5, 104);
+        ListView_SetColumnWidth(g_ui.profileWordsTable, 6, 96);
+    } else if (IsMrProfileMode()) {
+        MoveWindow(g_ui.mrProfileTableLabel, rightX, tableY + 2, rightW, 20, TRUE);
+        MoveWindow(g_ui.mrProfileTable, rightX, tableY + 22, rightW, std::max(120, tableH - 22), TRUE);
+        ListView_SetColumnWidth(g_ui.mrProfileTable, 0, 70);
+        ListView_SetColumnWidth(g_ui.mrProfileTable, 1, 140);
+        ListView_SetColumnWidth(g_ui.mrProfileTable, 2, 120);
+        ListView_SetColumnWidth(g_ui.mrProfileTable, 3, std::max(120, rightW - 340));
+    } else if (IsMrTimesMode()) {
+        MoveWindow(g_ui.mrTimesTableLabel, rightX, tableY + 2, rightW, 20, TRUE);
+        MoveWindow(g_ui.mrTimesTable, rightX, tableY + 22, rightW, std::max(120, tableH - 22), TRUE);
+        ListView_SetColumnWidth(g_ui.mrTimesTable, 0, 60);
+        ListView_SetColumnWidth(g_ui.mrTimesTable, 1, std::max(120, rightW - 420));
+        ListView_SetColumnWidth(g_ui.mrTimesTable, 2, 110);
+        ListView_SetColumnWidth(g_ui.mrTimesTable, 3, 110);
+        ListView_SetColumnWidth(g_ui.mrTimesTable, 4, 120);
+    } else if (IsMrSeg0Mode()) {
+        MoveWindow(g_ui.mrSeg0TableLabel, rightX, tableY + 2, rightW, 20, TRUE);
+        MoveWindow(g_ui.mrSeg0Table, rightX, tableY + 22, rightW, std::max(120, tableH - 22), TRUE);
+        ListView_SetColumnWidth(g_ui.mrSeg0Table, 0, 70);
+        ListView_SetColumnWidth(g_ui.mrSeg0Table, 1, std::max(90, (rightW - 300) / 3));
+        ListView_SetColumnWidth(g_ui.mrSeg0Table, 2, std::max(90, (rightW - 300) / 3));
+        ListView_SetColumnWidth(g_ui.mrSeg0Table, 3, std::max(90, (rightW - 300) / 3));
+        ListView_SetColumnWidth(g_ui.mrSeg0Table, 4, 110);
+        ListView_SetColumnWidth(g_ui.mrSeg0Table, 5, 110);
     } else {
         MoveWindow(g_ui.profileFreerideBitsLabel, 0, 0, 0, 0, TRUE);
         MoveWindow(g_ui.profileRaceBitsLabel, 0, 0, 0, 0, TRUE);
         MoveWindow(g_ui.profileFreerideBits, 0, 0, 0, 0, TRUE);
         MoveWindow(g_ui.profileRaceBits, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.profileWordsTableLabel, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.profileWordsTable, 0, 0, 0, 0, TRUE);
+    }
+
+    if (!IsMrProfileMode()) {
+        MoveWindow(g_ui.mrProfileTableLabel, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.mrProfileTable, 0, 0, 0, 0, TRUE);
+    }
+    if (!IsMrTimesMode()) {
+        MoveWindow(g_ui.mrTimesTableLabel, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.mrTimesTable, 0, 0, 0, 0, TRUE);
+    }
+    if (!IsMrSeg0Mode()) {
+        MoveWindow(g_ui.mrSeg0TableLabel, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.mrSeg0Table, 0, 0, 0, 0, TRUE);
+    }
+    if (!IsProfileMode()) {
+        MoveWindow(g_ui.profileWordsTableLabel, 0, 0, 0, 0, TRUE);
+        MoveWindow(g_ui.profileWordsTable, 0, 0, 0, 0, TRUE);
     }
 }
 
@@ -4798,6 +6665,13 @@ void LayoutActorsPage() {
     addRowIfVisible(g_ui.humanShootXLabel, g_ui.humanShootX);
     addRowIfVisible(g_ui.humanShootYLabel, g_ui.humanShootY);
     addRowIfVisible(g_ui.humanShootZLabel, g_ui.humanShootZ);
+    addRowIfVisible(g_ui.humanHpCurrentLabel, g_ui.humanHpCurrent);
+    addRowIfVisible(g_ui.humanHpMaxLabel, g_ui.humanHpMax);
+    addRowIfVisible(g_ui.humanHpPercentLabel, g_ui.humanHpPercent);
+    addRowIfVisible(g_ui.humanPropIndexLabel, g_ui.humanPropIndex);
+    addRowIfVisible(g_ui.humanPropNameLabel, g_ui.humanPropName);
+    addRowIfVisible(g_ui.humanPropCurLabel, g_ui.humanPropCur);
+    addRowIfVisible(g_ui.humanPropInitLabel, g_ui.humanPropInit);
     addRowIfVisible(g_ui.rotwLabel, g_ui.rotw);
     addRowIfVisible(g_ui.rotxLabel, g_ui.rotx);
     addRowIfVisible(g_ui.rotyLabel, g_ui.roty);
@@ -4845,7 +6719,10 @@ void LayoutActorsPage() {
     addRowIfVisible(g_ui.invS5HiddenLabel, g_ui.invS5Hidden);
     addRowIfVisible(g_ui.invS5UnkLabel, g_ui.invS5Unk);
 
-    const int rightContentH = visibleRows * 32 + 24 + 8 + 28 + 4;
+    int rightContentH = visibleRows * 32 + 24 + 8 + 28 + 4;
+    if (g_ui.humanPropsTable != nullptr && IsWindowVisible(g_ui.humanPropsTable)) {
+        rightContentH += 190;
+    }
     UpdateActorsRightScrollBar(rightViewportH, rightContentH);
     const int scrollY = g_state.actorsRightScroll;
     int y = 0;
@@ -4883,6 +6760,22 @@ void LayoutActorsPage() {
     placeRightRow(g_ui.humanShootXLabel, g_ui.humanShootX, 170);
     placeRightRow(g_ui.humanShootYLabel, g_ui.humanShootY, 170);
     placeRightRow(g_ui.humanShootZLabel, g_ui.humanShootZ, 170);
+    placeRightRow(g_ui.humanHpCurrentLabel, g_ui.humanHpCurrent, 170);
+    placeRightRow(g_ui.humanHpMaxLabel, g_ui.humanHpMax, 170);
+    placeRightRow(g_ui.humanHpPercentLabel, g_ui.humanHpPercent, 170);
+    placeRightRow(g_ui.humanPropIndexLabel, g_ui.humanPropIndex, 170);
+    placeRightRow(g_ui.humanPropNameLabel, g_ui.humanPropName, 220);
+    placeRightRow(g_ui.humanPropCurLabel, g_ui.humanPropCur, 170);
+    placeRightRow(g_ui.humanPropInitLabel, g_ui.humanPropInit, 170);
+    if (g_ui.humanPropsLabel != nullptr && g_ui.humanPropsTable != nullptr && IsWindowVisible(g_ui.humanPropsTable)) {
+        const int drawY = rightTop + y - scrollY;
+        MoveWindow(g_ui.humanPropsLabel, rightX, drawY + 2, rightW, 20, TRUE);
+        y += 22;
+        MoveWindow(g_ui.humanPropsTable, rightX, rightTop + y - scrollY, rightW, 136, TRUE);
+        y += 140;
+        MoveWindow(g_ui.humanPropApply, rightX + rightW - 110, rightTop + y - scrollY + 2, 110, 24, TRUE);
+        y += 30;
+    }
     placeRightRow(g_ui.rotwLabel, g_ui.rotw, 170);
     placeRightRow(g_ui.rotxLabel, g_ui.rotx, 170);
     placeRightRow(g_ui.rotyLabel, g_ui.roty, 170);
@@ -4940,6 +6833,66 @@ void LayoutActorsPage() {
     const int cloneX = std::max(rightX, applyX - actionGap - actionW);
     MoveWindow(g_ui.cloneActor, cloneX, actionY, actionW, 28, TRUE);
     MoveWindow(g_ui.applyActor, applyX, actionY, actionW, 28, TRUE);
+}
+
+void LayoutActorRawPage() {
+    if (g_ui.pageActorRaw == nullptr) {
+        return;
+    }
+    RECT rc = {};
+    GetClientRect(g_ui.pageActorRaw, &rc);
+    const int w = rc.right - rc.left;
+    const int h = rc.bottom - rc.top;
+
+    const int margin = 16;
+    const int gap = 14;
+    const int rowH = 24;
+
+    int leftW = std::max(320, w / 3);
+    leftW = std::min(leftW, std::max(280, w - margin * 2 - 420 - gap));
+    const int rightW = std::max(380, w - margin * 2 - gap - leftW);
+    const int leftX = margin;
+    const int rightX = leftX + leftW + gap;
+
+    MoveWindow(g_ui.actorRawTitle, margin, 12, w - margin * 2, 20, TRUE);
+    MoveWindow(g_ui.actorRawActors, leftX, 40, leftW, std::max(120, h - margin - 40), TRUE);
+
+    int y = 40;
+    MoveWindow(g_ui.actorRawScopeLabel, rightX, y + 2, 48, 20, TRUE);
+    MoveWindow(g_ui.actorRawScope, rightX + 56, y, 140, rowH + 180, TRUE);
+    MoveWindow(g_ui.actorRawReload, rightX + 208, y, 110, rowH, TRUE);
+    y += 32;
+
+    MoveWindow(g_ui.actorRawOffsetLabel, rightX, y + 2, 48, 20, TRUE);
+    MoveWindow(g_ui.actorRawOffset, rightX + 56, y, 90, rowH, TRUE);
+    MoveWindow(g_ui.actorRawByteLabel, rightX + 156, y + 2, 42, 20, TRUE);
+    MoveWindow(g_ui.actorRawByte, rightX + 204, y, 90, rowH, TRUE);
+    MoveWindow(g_ui.actorRawApplyByte, rightX + 304, y, 96, rowH, TRUE);
+    y += 32;
+
+    MoveWindow(g_ui.actorRawU32Label, rightX, y + 2, 48, 20, TRUE);
+    MoveWindow(g_ui.actorRawU32, rightX + 56, y, 140, rowH, TRUE);
+    MoveWindow(g_ui.actorRawApplyU32, rightX + 208, y, 96, rowH, TRUE);
+    y += 32;
+
+    MoveWindow(g_ui.actorRawF32Label, rightX, y + 2, 48, 20, TRUE);
+    MoveWindow(g_ui.actorRawF32, rightX + 56, y, 140, rowH, TRUE);
+    MoveWindow(g_ui.actorRawApplyF32, rightX + 208, y, 96, rowH, TRUE);
+    y += 34;
+
+    MoveWindow(g_ui.actorRawHint, rightX, y, rightW, 20, TRUE);
+    y += 24;
+    MoveWindow(g_ui.actorRawTableLabel, rightX, y, rightW, 18, TRUE);
+    y += 20;
+    MoveWindow(g_ui.actorRawTable, rightX, y, rightW, std::max(120, h - margin - y), TRUE);
+
+    ListView_SetColumnWidth(g_ui.actorRawTable, 0, 64);
+    ListView_SetColumnWidth(g_ui.actorRawTable, 1, 84);
+    ListView_SetColumnWidth(g_ui.actorRawTable, 2, 64);
+    ListView_SetColumnWidth(g_ui.actorRawTable, 3, 96);
+    ListView_SetColumnWidth(g_ui.actorRawTable, 4, 110);
+    ListView_SetColumnWidth(g_ui.actorRawTable, 5, 110);
+    ListView_SetColumnWidth(g_ui.actorRawTable, 6, 56);
 }
 
 void LayoutCarsPage() {
@@ -5102,6 +7055,7 @@ void LayoutWindow(HWND hwnd) {
     TabCtrl_AdjustRect(g_ui.tab, FALSE, &trc);
     MoveWindow(g_ui.pageMain, trc.left, trc.top, trc.right - trc.left, trc.bottom - trc.top, TRUE);
     MoveWindow(g_ui.pageActors, trc.left, trc.top, trc.right - trc.left, trc.bottom - trc.top, TRUE);
+    MoveWindow(g_ui.pageActorRaw, trc.left, trc.top, trc.right - trc.left, trc.bottom - trc.top, TRUE);
     MoveWindow(g_ui.pageCars, trc.left, trc.top, trc.right - trc.left, trc.bottom - trc.top, TRUE);
     MoveWindow(g_ui.pageGarage, trc.left, trc.top, trc.right - trc.left, trc.bottom - trc.top, TRUE);
     MoveWindow(g_ui.pageMission, trc.left, trc.top, trc.right - trc.left, trc.bottom - trc.top, TRUE);
@@ -5115,6 +7069,7 @@ void LayoutWindow(HWND hwnd) {
     LayoutMainPage();
     LayoutMissionPage();
     LayoutActorsPage();
+    LayoutActorRawPage();
     LayoutCarsPage();
     LayoutGaragePage();
 }
@@ -5129,6 +7084,8 @@ void CreatePages(HWND hwnd) {
                                     rc.bottom - rc.top, hwnd, nullptr, nullptr, nullptr);
     g_ui.pageActors = CreateWindowExA(0, "STATIC", "", WS_CHILD, rc.left, rc.top, rc.right - rc.left,
                                       rc.bottom - rc.top, hwnd, nullptr, nullptr, nullptr);
+    g_ui.pageActorRaw = CreateWindowExA(0, "STATIC", "", WS_CHILD, rc.left, rc.top, rc.right - rc.left,
+                                        rc.bottom - rc.top, hwnd, nullptr, nullptr, nullptr);
     g_ui.pageCars = CreateWindowExA(0, "STATIC", "", WS_CHILD, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top,
                                     hwnd, nullptr, nullptr, nullptr);
     g_ui.pageGarage = CreateWindowExA(0, "STATIC", "", WS_CHILD, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top,
@@ -5137,6 +7094,7 @@ void CreatePages(HWND hwnd) {
                                        rc.bottom - rc.top, hwnd, nullptr, nullptr, nullptr);
     SubclassPageForward(g_ui.pageMain);
     SubclassPageForward(g_ui.pageActors);
+    SubclassPageForward(g_ui.pageActorRaw);
     SubclassPageForward(g_ui.pageCars);
     SubclassPageForward(g_ui.pageGarage);
     SubclassPageForward(g_ui.pageMission);
@@ -5163,6 +7121,23 @@ void CreatePages(HWND hwnd) {
     ListView_SetExtendedListViewStyle(g_ui.profileRaceBits, lvStyle);
     EnsureMaskListColumns(g_ui.profileFreerideBits);
     EnsureMaskListColumns(g_ui.profileRaceBits);
+    g_ui.mrProfileTableLabel = MakeLabel(g_ui.pageMain, "mrXXX table:", 150, 236, 220, 20);
+    g_ui.mrTimesTableLabel = MakeLabel(g_ui.pageMain, "mrtimes table:", 150, 236, 220, 20);
+    g_ui.mrSeg0TableLabel = MakeLabel(g_ui.pageMain, "mrseg0 table:", 150, 236, 220, 20);
+    g_ui.profileWordsTableLabel = MakeLabel(g_ui.pageMain, "Profile words table:", 150, 236, 220, 20);
+    g_ui.mrProfileTable = MakeListView(g_ui.pageMain, 150, 258, 450, 220, ID_LIST_MR_PROFILE);
+    g_ui.mrTimesTable = MakeListView(g_ui.pageMain, 150, 258, 450, 220, ID_LIST_MR_TIMES);
+    g_ui.mrSeg0Table = MakeListView(g_ui.pageMain, 150, 258, 450, 220, ID_LIST_MR_SEG0);
+    g_ui.profileWordsTable = MakeListView(g_ui.pageMain, 150, 258, 450, 220, ID_LIST_PROFILE_WORDS);
+    const DWORD mrLvStyle = LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_DOUBLEBUFFER;
+    ListView_SetExtendedListViewStyle(g_ui.mrProfileTable, mrLvStyle);
+    ListView_SetExtendedListViewStyle(g_ui.mrTimesTable, mrLvStyle);
+    ListView_SetExtendedListViewStyle(g_ui.mrSeg0Table, mrLvStyle);
+    ListView_SetExtendedListViewStyle(g_ui.profileWordsTable, mrLvStyle);
+    EnsureProfileWordsColumns();
+    EnsureMrProfileColumns();
+    EnsureMrTimesColumns();
+    EnsureMrSeg0Columns();
 
     g_ui.missionTitle = MakeLabel(g_ui.pageMission, "Mission / Script State (advanced)", 16, 12, 360, 20);
     g_ui.ghMarkerLabel = MakeLabel(g_ui.pageMission, "Payload marker:", 16, 44, 130, 20);
@@ -5209,9 +7184,9 @@ void CreatePages(HWND hwnd) {
     g_ui.progLoadVar = MakeButton(g_ui.pageMission, "Read Script Var", 634, 268, 130, 28, ID_BTN_PROG_LOAD_VAR);
     g_ui.progReloadTable = MakeButton(g_ui.pageMission, "Reload Table", 770, 268, 130, 28, ID_BTN_PROG_RELOAD_TABLE);
     g_ui.progVarsTableLabel = MakeLabel(g_ui.pageMission, "Script vars table (index | value):", 16, 388, 320, 18);
-    g_ui.progVarsTable = CreateWindowExA(WS_EX_CLIENTEDGE,
-                                          "LISTBOX",
-                                          "",
+    g_ui.progVarsTable = CreateWindowExW(WS_EX_CLIENTEDGE,
+                                          L"LISTBOX",
+                                          L"",
                                           WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
                                           16,
                                           408,
@@ -5228,9 +7203,9 @@ void CreatePages(HWND hwnd) {
                   16, 352, 920, 18);
 
     g_ui.carsTitle = MakeLabel(g_ui.pageCars, "Cars", 16, 12, 200, 20);
-    g_ui.carsList = CreateWindowExA(WS_EX_CLIENTEDGE,
-                                    "LISTBOX",
-                                    "",
+    g_ui.carsList = CreateWindowExW(WS_EX_CLIENTEDGE,
+                                    L"LISTBOX",
+                                    L"",
                                     WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
                                     16,
                                     40,
@@ -5272,9 +7247,9 @@ void CreatePages(HWND hwnd) {
     g_ui.carsHint = MakeLabel(g_ui.pageCars, "Cars: -", 476, 518, 252, 20);
 
     g_ui.garageTitle = MakeLabel(g_ui.pageGarage, "Garage (Salieri bar)", 16, 12, 260, 20);
-    g_ui.garageList = CreateWindowExA(WS_EX_CLIENTEDGE,
-                                      "LISTBOX",
-                                      "",
+    g_ui.garageList = CreateWindowExW(WS_EX_CLIENTEDGE,
+                                      L"LISTBOX",
+                                      L"",
                                       WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
                                       16,
                                       40,
@@ -5333,7 +7308,7 @@ void CreatePages(HWND hwnd) {
     g_ui.applyFilter = MakeButton(g_ui.pageActors, "Apply", 472, 38, 70, 24, ID_BTN_FILTER_APPLY);
     g_ui.clearFilter = MakeButton(g_ui.pageActors, "Clear", 548, 38, 70, 24, ID_BTN_FILTER_CLEAR);
 
-    g_ui.actors = CreateWindowExA(WS_EX_CLIENTEDGE, "LISTBOX", "", WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
+    g_ui.actors = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
                                   16, 70, 470, 216, g_ui.pageActors,
                                   reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_LIST_ACTORS)), nullptr, nullptr);
     g_ui.anameLabel = MakeLabel(g_ui.pageActors, "Actor name:", 510, 44, 120, 20);
@@ -5382,6 +7357,25 @@ void CreatePages(HWND hwnd) {
     g_ui.humanShootY = MakeEdit(g_ui.pageActors, "", 640, 714, 140, 24, ID_EDIT_HUMAN_SHOOT_Y);
     g_ui.humanShootZLabel = MakeLabel(g_ui.pageActors, "Shoot Z (62):", 510, 748, 120, 20);
     g_ui.humanShootZ = MakeEdit(g_ui.pageActors, "", 640, 746, 140, 24, ID_EDIT_HUMAN_SHOOT_Z);
+    g_ui.humanHpCurrentLabel = MakeLabel(g_ui.pageActors, "HP current (246):", 510, 780, 120, 20);
+    g_ui.humanHpCurrent = MakeEdit(g_ui.pageActors, "", 640, 778, 140, 24, ID_EDIT_HUMAN_HP_CURRENT);
+    g_ui.humanHpMaxLabel = MakeLabel(g_ui.pageActors, "HP max (310):", 510, 812, 120, 20);
+    g_ui.humanHpMax = MakeEdit(g_ui.pageActors, "", 640, 810, 140, 24, ID_EDIT_HUMAN_HP_MAX);
+    g_ui.humanHpPercentLabel = MakeLabel(g_ui.pageActors, "HP % (calc):", 510, 844, 120, 20);
+    g_ui.humanHpPercent = MakeEdit(g_ui.pageActors, "", 640, 842, 140, 24, ID_EDIT_HUMAN_HP_PERCENT, ES_READONLY);
+    g_ui.humanPropIndexLabel = MakeLabel(g_ui.pageActors, "Prop idx:", 510, 876, 120, 20);
+    g_ui.humanPropIndex = MakeEdit(g_ui.pageActors, "", 640, 874, 140, 24, ID_EDIT_HPROP_INDEX);
+    g_ui.humanPropNameLabel = MakeLabel(g_ui.pageActors, "Prop name:", 510, 908, 120, 20);
+    g_ui.humanPropName = MakeEdit(g_ui.pageActors, "", 640, 906, 220, 24, ID_EDIT_HPROP_NAME, ES_READONLY);
+    g_ui.humanPropCurLabel = MakeLabel(g_ui.pageActors, "Prop current:", 510, 940, 120, 20);
+    g_ui.humanPropCur = MakeEdit(g_ui.pageActors, "", 640, 938, 140, 24, ID_EDIT_HPROP_CUR);
+    g_ui.humanPropInitLabel = MakeLabel(g_ui.pageActors, "Prop init:", 510, 972, 120, 20);
+    g_ui.humanPropInit = MakeEdit(g_ui.pageActors, "", 640, 970, 140, 24, ID_EDIT_HPROP_INIT);
+    g_ui.humanPropsLabel = MakeLabel(g_ui.pageActors, "Human properties (decoded):", 510, 1004, 220, 20);
+    g_ui.humanPropsTable = MakeListView(g_ui.pageActors, 510, 1024, 330, 136, ID_LIST_HUMAN_PROPS);
+    ListView_SetExtendedListViewStyle(g_ui.humanPropsTable, LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_DOUBLEBUFFER);
+    EnsureHumanPropsColumns();
+    g_ui.humanPropApply = MakeButton(g_ui.pageActors, "Apply Prop", 730, 1166, 110, 24, ID_BTN_HPROP_APPLY);
     g_ui.rotwLabel = MakeLabel(g_ui.pageActors, "Rot W:", 510, 780, 120, 20);
     g_ui.rotw = MakeEdit(g_ui.pageActors, "", 640, 778, 140, 24, ID_EDIT_ROT_W);
     g_ui.rotxLabel = MakeLabel(g_ui.pageActors, "Rot X:", 510, 812, 120, 20);
@@ -5478,6 +7472,46 @@ void CreatePages(HWND hwnd) {
     g_ui.applyActor = MakeButton(g_ui.pageActors, "Apply Actor", 790, 202, 110, 28, ID_BTN_APPLY_ACTOR);
     g_ui.cloneActor = MakeButton(g_ui.pageActors, "Clone Actor", 670, 202, 110, 28, ID_BTN_CLONE_ACTOR);
 
+    g_ui.actorRawTitle = MakeLabel(g_ui.pageActorRaw, "Actor Raw Editor (all bytes)", 16, 12, 280, 20);
+    g_ui.actorRawActors = CreateWindowExW(WS_EX_CLIENTEDGE,
+                                          L"LISTBOX",
+                                          L"",
+                                          WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
+                                          16,
+                                          40,
+                                          360,
+                                          320,
+                                          g_ui.pageActorRaw,
+                                          reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_LIST_ACTOR_RAW_ACTORS)),
+                                          nullptr,
+                                          nullptr);
+    g_ui.actorRawScopeLabel = MakeLabel(g_ui.pageActorRaw, "Scope:", 396, 42, 56, 20);
+    g_ui.actorRawScope = MakeCombo(g_ui.pageActorRaw, 452, 40, 160, 220, ID_COMBO_ACTOR_RAW_SCOPE);
+    ComboAddStringUtf8(g_ui.actorRawScope, "Header");
+    ComboAddStringUtf8(g_ui.actorRawScope, "Payload");
+    SendMessageA(g_ui.actorRawScope, CB_SETCURSEL, 1, 0);
+    g_ui.actorRawReload = MakeButton(g_ui.pageActorRaw, "Reload", 620, 40, 110, 24, ID_BTN_ACTOR_RAW_RELOAD);
+
+    g_ui.actorRawOffsetLabel = MakeLabel(g_ui.pageActorRaw, "Offset:", 396, 74, 56, 20);
+    g_ui.actorRawOffset = MakeEdit(g_ui.pageActorRaw, "", 452, 72, 90, 24, ID_EDIT_ACTOR_RAW_OFFSET);
+    g_ui.actorRawByteLabel = MakeLabel(g_ui.pageActorRaw, "Byte:", 552, 74, 44, 20);
+    g_ui.actorRawByte = MakeEdit(g_ui.pageActorRaw, "", 600, 72, 90, 24, ID_EDIT_ACTOR_RAW_BYTE);
+    g_ui.actorRawApplyByte = MakeButton(g_ui.pageActorRaw, "Apply Byte", 700, 72, 96, 24, ID_BTN_ACTOR_RAW_APPLY_BYTE);
+
+    g_ui.actorRawU32Label = MakeLabel(g_ui.pageActorRaw, "U32:", 396, 106, 56, 20);
+    g_ui.actorRawU32 = MakeEdit(g_ui.pageActorRaw, "", 452, 104, 140, 24, ID_EDIT_ACTOR_RAW_U32);
+    g_ui.actorRawApplyU32 = MakeButton(g_ui.pageActorRaw, "Apply U32", 600, 104, 96, 24, ID_BTN_ACTOR_RAW_APPLY_U32);
+
+    g_ui.actorRawF32Label = MakeLabel(g_ui.pageActorRaw, "F32:", 396, 138, 56, 20);
+    g_ui.actorRawF32 = MakeEdit(g_ui.pageActorRaw, "", 452, 136, 140, 24, ID_EDIT_ACTOR_RAW_F32);
+    g_ui.actorRawApplyF32 = MakeButton(g_ui.pageActorRaw, "Apply F32", 600, 136, 96, 24, ID_BTN_ACTOR_RAW_APPLY_F32);
+
+    g_ui.actorRawHint = MakeLabel(g_ui.pageActorRaw, "Raw actor data: -", 396, 170, 520, 20);
+    g_ui.actorRawTableLabel = MakeLabel(g_ui.pageActorRaw, "Raw bytes (all offsets):", 396, 194, 220, 18);
+    g_ui.actorRawTable = MakeListView(g_ui.pageActorRaw, 396, 214, 520, 220, ID_LIST_ACTOR_RAW_TABLE);
+    ListView_SetExtendedListViewStyle(g_ui.actorRawTable, LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_DOUBLEBUFFER);
+    EnsureActorRawColumns();
+
     ShowTab(0);
 }
 
@@ -5541,6 +7575,27 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             const LRESULT sel = SendMessageA(g_ui.actors, LB_GETCURSEL, 0, 0);
             g_state.selectedActor = (sel == LB_ERR) ? -1 : static_cast<int>(sel);
             FillActorEditor();
+            FillActorRawTable();
+            return 0;
+        }
+        if (id == ID_LIST_ACTOR_RAW_ACTORS && code == LBN_SELCHANGE) {
+            const LRESULT sel = SendMessageA(g_ui.actorRawActors, LB_GETCURSEL, 0, 0);
+            g_state.selectedActor = (sel == LB_ERR) ? -1 : static_cast<int>(sel);
+            FillActorList();
+            RebuildCarIndex();
+            FillCarsList();
+            FillActorRawTable();
+            RefreshInfo();
+            return 0;
+        }
+        if (id == ID_COMBO_ACTOR_RAW_SCOPE && code == CBN_SELCHANGE) {
+            SetActorRawScope(GetActorRawScope());
+            FillActorRawTable();
+            return 0;
+        }
+        if (id == ID_BTN_ACTOR_RAW_RELOAD && code == BN_CLICKED) {
+            FillActorRawTable();
+            SetStatus("Actor raw table reloaded");
             return 0;
         }
         if (id == ID_LIST_CARS && code == LBN_SELCHANGE) {
@@ -5574,12 +7629,118 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         if ((id == ID_EDIT_HP || id == ID_EDIT_DATE || id == ID_EDIT_TIME || id == ID_EDIT_SLOT || id == ID_EDIT_MCODE ||
              id == ID_EDIT_MNAME) &&
             code == EN_CHANGE) {
-            if (!g_suppressMainEditEvents && IsProfileMode()) {
-                if (id == ID_EDIT_DATE || id == ID_EDIT_TIME) {
-                    RefreshProfileMaskListsFromFields();
+            if (!g_suppressMainEditEvents) {
+                if (IsProfileMode()) {
+                    if (id == ID_EDIT_DATE || id == ID_EDIT_TIME) {
+                        RefreshProfileMaskListsFromFields();
+                    }
+                    RefreshWarning();
+                } else if (IsMrProfileMode()) {
+                    if (id == ID_EDIT_HP) {
+                        std::uint32_t idx = 0;
+                        std::string parseErr;
+                        if (ParseU32Auto(Trim(GetText(g_ui.hp)), &idx, &parseErr, "Word index") &&
+                            idx < g_state.mrProfile.words.size()) {
+                            g_state.selectedMrProfileWord = static_cast<int>(idx);
+                            FillMain();
+                        }
+                    } else if (id == ID_EDIT_DATE) {
+                        std::uint32_t val = 0;
+                        std::string parseErr;
+                        if (ParseU32Auto(Trim(GetText(g_ui.date)), &val, &parseErr, "Word value")) {
+                            g_suppressMainEditEvents = true;
+                            SetText(g_ui.time, FormatU32Hex(val));
+                            g_suppressMainEditEvents = false;
+                        }
+                    }
+                } else if (IsMrTimesMode() && id == ID_EDIT_HP) {
+                    std::uint32_t idx = 0;
+                    std::string parseErr;
+                    if (ParseU32Auto(Trim(GetText(g_ui.hp)), &idx, &parseErr, "Record index") &&
+                        idx < g_state.mrTimes.records.size()) {
+                        g_state.selectedMrTimesRecord = static_cast<int>(idx);
+                        FillMain();
+                    }
+                } else if (IsMrSeg0Mode() && id == ID_EDIT_HP) {
+                    std::uint32_t idx = 0;
+                    std::string parseErr;
+                    if (ParseU32Auto(Trim(GetText(g_ui.hp)), &idx, &parseErr, "Point index") &&
+                        idx < g_state.mrSeg0.points.size()) {
+                        g_state.selectedMrSeg0Point = static_cast<int>(idx);
+                        FillMain();
+                    }
                 }
-                RefreshWarning();
             }
+            return 0;
+        }
+        if (id == ID_EDIT_ACTOR_RAW_OFFSET && code == EN_CHANGE) {
+            UpdateActorRawEditorsFromOffset();
+            return 0;
+        }
+        if ((id == ID_BTN_ACTOR_RAW_APPLY_BYTE || id == ID_BTN_ACTOR_RAW_APPLY_U32 || id == ID_BTN_ACTOR_RAW_APPLY_F32) &&
+            code == BN_CLICKED) {
+            std::string err;
+            bool ok = false;
+            if (id == ID_BTN_ACTOR_RAW_APPLY_BYTE) {
+                ok = ApplyActorRawByte(&err);
+            } else if (id == ID_BTN_ACTOR_RAW_APPLY_U32) {
+                ok = ApplyActorRawU32(&err);
+            } else {
+                ok = ApplyActorRawF32(&err);
+            }
+            if (!ok) {
+                Error(hwnd, "Actor raw apply failed: " + err);
+                return 0;
+            }
+            RebuildFilteredActors();
+            RebuildCarIndex();
+            FillActorList();
+            FillCarsList();
+            FillActorRawTable();
+            RefreshInfo();
+            SetStatus("Actor raw value applied");
+            return 0;
+        }
+        if (id == ID_EDIT_HPROP_INDEX && code == EN_CHANGE) {
+            if (g_suppressHumanPropEvents) {
+                return 0;
+            }
+            std::uint32_t idx = 0;
+            if (!ParseU32Auto(Trim(GetText(g_ui.humanPropIndex)), &idx, nullptr, "Prop idx") || idx >= 16u) {
+                return 0;
+            }
+            g_state.selectedHumanProp = static_cast<int>(idx);
+            if (g_ui.humanPropsTable != nullptr && ListView_GetItemCount(g_ui.humanPropsTable) > 0) {
+                g_suppressHumanPropEvents = true;
+                SelectListRow(g_ui.humanPropsTable, g_state.selectedHumanProp);
+                g_suppressHumanPropEvents = false;
+            }
+            const auto segIdxOpt = CurrentSelectedActorSegIdx();
+            if (segIdxOpt.has_value() && IsActorPairAt(*segIdxOpt)) {
+                const auto layout = DetectCoordLayout(*segIdxOpt);
+                const auto& p = g_state.save.segments[*segIdxOpt + 1].plain;
+                if (layout.humanPropsSupported) {
+                    g_suppressHumanPropEvents = true;
+                    SetText(g_ui.humanPropName, kHumanPropNames[g_state.selectedHumanProp]);
+                    SetText(g_ui.humanPropCur,
+                            FormatFloat3(ReadF32LE(p, layout.humanPropsCurrentOff +
+                                                          (static_cast<std::size_t>(g_state.selectedHumanProp) * 4u))));
+                    SetText(g_ui.humanPropInit,
+                            FormatFloat3(ReadF32LE(p, layout.humanPropsInitOff +
+                                                          (static_cast<std::size_t>(g_state.selectedHumanProp) * 4u))));
+                    g_suppressHumanPropEvents = false;
+                }
+            }
+            return 0;
+        }
+        if (id == ID_BTN_HPROP_APPLY && code == BN_CLICKED) {
+            std::string err;
+            if (!ApplySelectedHumanPropEdit(&err)) {
+                Error(hwnd, "Apply human property failed: " + err);
+                return 0;
+            }
+            FillActorEditor();
+            SetStatus("Human property applied");
             return 0;
         }
         if (id == ID_BTN_FILTER_APPLY && code == BN_CLICKED) {
@@ -5806,6 +7967,90 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 SetStatus("Saved profile .sav: " + outPath->string());
                 return 0;
             }
+            if (IsMrProfileMode()) {
+                profile_sav::MrProfileSaveData edited;
+                if (!BuildEditedMrProfile(&edited, &err)) {
+                    Error(hwnd, "mrXXX fields invalid: " + err);
+                    return 0;
+                }
+
+                const auto outPath = ChooseFile(hwnd, true, g_state.inputPath.filename().string());
+                if (!outPath.has_value()) {
+                    return 0;
+                }
+                std::vector<std::uint8_t> outRaw;
+                if (!profile_sav::BuildRaw(edited, &outRaw, &err)) {
+                    Error(hwnd, "mrXXX build failed: " + err);
+                    return 0;
+                }
+                if (!mafia_save::WriteFileBytes(*outPath, outRaw)) {
+                    Error(hwnd, "Failed to write output file");
+                    return 0;
+                }
+
+                g_state.mrProfile = std::move(edited);
+                g_state.raw = outRaw;
+                g_state.inputPath = *outPath;
+                FillAll();
+                SetStatus("Saved mrXXX.sav: " + outPath->string());
+                return 0;
+            }
+            if (IsMrTimesMode()) {
+                profile_sav::MrTimesSaveData edited;
+                if (!BuildEditedMrTimes(&edited, &err)) {
+                    Error(hwnd, "mrtimes fields invalid: " + err);
+                    return 0;
+                }
+
+                const auto outPath = ChooseFile(hwnd, true, g_state.inputPath.filename().string());
+                if (!outPath.has_value()) {
+                    return 0;
+                }
+                std::vector<std::uint8_t> outRaw;
+                if (!profile_sav::BuildRaw(edited, &outRaw, &err)) {
+                    Error(hwnd, "mrtimes build failed: " + err);
+                    return 0;
+                }
+                if (!mafia_save::WriteFileBytes(*outPath, outRaw)) {
+                    Error(hwnd, "Failed to write output file");
+                    return 0;
+                }
+
+                g_state.mrTimes = std::move(edited);
+                g_state.raw = outRaw;
+                g_state.inputPath = *outPath;
+                FillAll();
+                SetStatus("Saved mrtimes.sav: " + outPath->string());
+                return 0;
+            }
+            if (IsMrSeg0Mode()) {
+                profile_sav::MrSeg0SaveData edited;
+                if (!BuildEditedMrSeg0(&edited, &err)) {
+                    Error(hwnd, "mrseg0 fields invalid: " + err);
+                    return 0;
+                }
+
+                const auto outPath = ChooseFile(hwnd, true, g_state.inputPath.filename().string());
+                if (!outPath.has_value()) {
+                    return 0;
+                }
+                std::vector<std::uint8_t> outRaw;
+                if (!profile_sav::BuildRaw(edited, &outRaw, &err)) {
+                    Error(hwnd, "mrseg0 build failed: " + err);
+                    return 0;
+                }
+                if (!mafia_save::WriteFileBytes(*outPath, outRaw)) {
+                    Error(hwnd, "Failed to write output file");
+                    return 0;
+                }
+
+                g_state.mrSeg0 = std::move(edited);
+                g_state.raw = outRaw;
+                g_state.inputPath = *outPath;
+                FillAll();
+                SetStatus("Saved mrseg0.sav: " + outPath->string());
+                return 0;
+            }
             Error(hwnd, "Unknown loaded save kind");
             return 0;
         }
@@ -5881,6 +8126,93 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
     case WM_NOTIFY: {
         const auto* hdr = reinterpret_cast<const NMHDR*>(lParam);
+        if (hdr != nullptr && hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_HUMAN_PROPS) &&
+            hdr->code == LVN_ITEMCHANGED) {
+            if (g_suppressHumanPropEvents) {
+                return 0;
+            }
+            const auto* lv = reinterpret_cast<const NMLISTVIEW*>(lParam);
+            if (lv == nullptr || lv->iItem < 0 || (lv->uChanged & LVIF_STATE) == 0u) {
+                return 0;
+            }
+            const bool oldSel = (lv->uOldState & LVIS_SELECTED) != 0u;
+            const bool newSel = (lv->uNewState & LVIS_SELECTED) != 0u;
+            if (oldSel == newSel || !newSel) {
+                return 0;
+            }
+            g_state.selectedHumanProp = std::clamp(lv->iItem, 0, 15);
+            g_suppressHumanPropEvents = true;
+            SetText(g_ui.humanPropIndex, std::to_string(g_state.selectedHumanProp));
+            SetText(g_ui.humanPropName, kHumanPropNames[g_state.selectedHumanProp]);
+            const auto segIdxOpt = CurrentSelectedActorSegIdx();
+            if (segIdxOpt.has_value() && IsActorPairAt(*segIdxOpt)) {
+                const auto layout = DetectCoordLayout(*segIdxOpt);
+                const auto& p = g_state.save.segments[*segIdxOpt + 1].plain;
+                if (layout.humanPropsSupported) {
+                    SetText(g_ui.humanPropCur,
+                            FormatFloat3(ReadF32LE(p, layout.humanPropsCurrentOff +
+                                                          (static_cast<std::size_t>(g_state.selectedHumanProp) * 4u))));
+                    SetText(g_ui.humanPropInit,
+                            FormatFloat3(ReadF32LE(p, layout.humanPropsInitOff +
+                                                          (static_cast<std::size_t>(g_state.selectedHumanProp) * 4u))));
+                }
+            }
+            g_suppressHumanPropEvents = false;
+            return 0;
+        }
+        if (hdr != nullptr && hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_ACTOR_RAW_TABLE) &&
+            hdr->code == LVN_ITEMCHANGED) {
+            const auto* lv = reinterpret_cast<const NMLISTVIEW*>(lParam);
+            if (lv == nullptr || lv->iItem < 0 || (lv->uChanged & LVIF_STATE) == 0u) {
+                return 0;
+            }
+            const bool oldSel = (lv->uOldState & LVIS_SELECTED) != 0u;
+            const bool newSel = (lv->uNewState & LVIS_SELECTED) != 0u;
+            if (oldSel == newSel || !newSel) {
+                return 0;
+            }
+            g_state.actorRawOffset = lv->iItem;
+            SetText(g_ui.actorRawOffset, std::to_string(lv->iItem));
+            UpdateActorRawEditorsFromOffset();
+            return 0;
+        }
+        if (hdr != nullptr &&
+            (hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_MR_PROFILE) ||
+             hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_MR_TIMES) ||
+             hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_MR_SEG0)) &&
+            hdr->code == LVN_ITEMCHANGED) {
+            if (g_suppressMainEditEvents) {
+                return 0;
+            }
+            const auto* lv = reinterpret_cast<const NMLISTVIEW*>(lParam);
+            if (lv == nullptr || lv->iItem < 0 || (lv->uChanged & LVIF_STATE) == 0u) {
+                return 0;
+            }
+            const bool oldSel = (lv->uOldState & LVIS_SELECTED) != 0u;
+            const bool newSel = (lv->uNewState & LVIS_SELECTED) != 0u;
+            if (oldSel == newSel || !newSel) {
+                return 0;
+            }
+            if (hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_MR_PROFILE) && IsMrProfileMode()) {
+                g_state.selectedMrProfileWord = lv->iItem;
+                FillMain();
+                SetStatus("mrXXX: row selected");
+                return 0;
+            }
+            if (hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_MR_TIMES) && IsMrTimesMode()) {
+                g_state.selectedMrTimesRecord = lv->iItem;
+                FillMain();
+                SetStatus("mrtimes: row selected");
+                return 0;
+            }
+            if (hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_MR_SEG0) && IsMrSeg0Mode()) {
+                g_state.selectedMrSeg0Point = lv->iItem;
+                FillMain();
+                SetStatus("mrseg0: point selected");
+                return 0;
+            }
+            return 0;
+        }
         if (hdr != nullptr &&
             (hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_PROFILE_FREERIDE_BITS) ||
              hdr->idFrom == static_cast<UINT_PTR>(ID_LIST_PROFILE_RACE_BITS)) &&
@@ -5907,7 +8239,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
         if (hdr != nullptr && hdr->idFrom == static_cast<UINT_PTR>(ID_TAB) && hdr->code == TCN_SELCHANGE) {
             int tabIndex = TabCtrl_GetCurSel(g_ui.tab);
-            if (IsProfileMode() && tabIndex != 0) {
+            if (IsMainOnlyMode() && tabIndex != 0) {
                 tabIndex = 0;
                 TabCtrl_SetCurSel(g_ui.tab, 0);
             }
